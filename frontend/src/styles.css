@@ -16,54 +16,54 @@
    CSS VARIABLES — Design Tokens
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Colors */
-  --bg-app: #fafaf9;
-  --bg-app-2: #f5f5f4;
-  --panel: #ffffff;
-  --panel-2: #f7f6f4;
-  --panel-3: #f0efed;
+  /* Ultra-Premium Obsidian Dark Mode */
+  --bg-app: #09090d;
+  --bg-app-2: #0e0e14;
+  --panel: #13131b;
+  --panel-2: #191924;
+  --panel-3: #222230;
 
-  --border: #e8e6e3;
-  --border-strong: #d6d3d1;
-  --border-focus: #b72727;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-focus: #ef4444;
 
-  --text-1: #1c1917;
-  --text-2: #57534e;
-  --text-3: #a8a29e;
-  --text-4: #78716c;
+  --text-1: #ffffff;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --text-4: #52525b;
 
-  --accent: #b72727;
-  --accent-dark: #991b1b;
-  --accent-light: #dc2626;
-  --accent-soft: #fef2f2;
-  --accent-border: #fecaca;
-  --accent-muted: #fca5a5;
+  --accent: #dc2626;
+  --accent-dark: #b91c1c;
+  --accent-light: #f87171;
+  --accent-soft: rgba(220, 38, 38, 0.15);
+  --accent-border: rgba(239, 68, 68, 0.4);
+  --accent-muted: rgba(220, 38, 38, 0.25);
 
-  --emerald: #059669;
-  --emerald-soft: #ecfdf5;
-  --emerald-border: #a7f3d0;
+  --emerald: #10b981;
+  --emerald-soft: rgba(16, 185, 129, 0.15);
+  --emerald-border: rgba(52, 211, 153, 0.35);
 
-  --amber: #d97706;
-  --amber-soft: #fffbeb;
-  --amber-border: #fde68a;
+  --amber: #f59e0b;
+  --amber-soft: rgba(245, 158, 11, 0.15);
+  --amber-border: rgba(251, 191, 36, 0.35);
 
-  --sky: #0284c7;
-  --sky-soft: #f0f9ff;
-  --sky-border: #bae6fd;
+  --sky: #0ea5e9;
+  --sky-soft: rgba(14, 165, 233, 0.15);
+  --sky-border: rgba(56, 189, 248, 0.35);
 
-  --violet: #7c3aed;
-  --violet-soft: #f5f3ff;
-  --violet-border: #c4b5fd;
+  --violet: #8b5cf6;
+  --violet-soft: rgba(139, 92, 246, 0.15);
+  --violet-border: rgba(167, 139, 250, 0.35);
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-sm: 0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.06), 0 2px 4px -2px rgba(28, 25, 23, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.08), 0 4px 6px -4px rgba(28, 25, 23, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(28, 25, 23, 0.1), 0 8px 10px -6px rgba(28, 25, 23, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(28, 25, 23, 0.15);
-  --shadow-accent: 0 4px 14px rgba(183, 39, 39, 0.25);
-  --shadow-accent-lg: 0 8px 30px rgba(183, 39, 39, 0.3);
+  /* High-Tech Glow Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.7), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.8), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.9), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.95);
+  --shadow-accent: 0 4px 20px rgba(220, 38, 38, 0.4);
+  --shadow-accent-lg: 0 8px 30px rgba(220, 38, 38, 0.5);
 
   /* Radii */
   --radius-sm: 8px;
@@ -79,9 +79,6 @@
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
-  --duration-slower: 400ms;
-
-  color-scheme: light;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -785,7 +782,7 @@ table {
 }
 
 .seg-btn-active {
-  background: var(--panel);
+  background: var(--panel-2);
   color: var(--text-1);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-xs);
