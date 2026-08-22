@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AnalysisResult, CatalogItem, DatabaseRecord, PricePoint, ProductBrief, Opportunity } from './types'
+import type { AnalysisResult, AnalyzeOpportunitiesPayload, CatalogItem, DatabaseRecord, PricePoint, ProductBrief, Opportunity } from './types'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
@@ -122,10 +122,46 @@ interface RawOpportunityResponse {
   best_fit_sku: string
 }
 
-export const analyzeOpportunities = async (payload: any | {
-  market_and_niche?: { seed_keywords?: string[]; target_brand?: string }
-  strategy?: { preset?: string }
-}): Promise<AnalysisResult> => {
+function normalizeScoreBreakdown(raw?: Record<string, number>): Opportunity['score_breakdown'] {
+  const value = (key: string, fallback: number) => {
+    const numeric = Number(raw?.[key])
+    return Number.isFinite(numeric) ? Math.min(100, Math.max(0, numeric)) : fallback
+  }
+
+  return {
+    demand_growth: value('demand_growth', 80),
+    market_gap: value('market_gap', 72),
+    profit_margin: value('profit_margin', 75),
+    supply_feasibility: value('supply_feasibility', 78),
+    ip_safety: value('ip_safety', 95),
+    tiktok_virality: value('tiktok_virality', 80),
+  }
+}
+
+function applyFrontendConstraints(
+  opportunities: Opportunity[],
+  payload: AnalyzeOpportunitiesPayload,
+): Opportunity[] {
+  const selectedCategories = new Set(
+    payload.market_and_niche.categories.map((category) => category.toLowerCase()),
+  )
+
+  return opportunities.filter((item) => {
+    const categoryMatches =
+      selectedCategories.size === 0 || selectedCategories.has(item.category.toLowerCase())
+    const growthMatches =
+      item.score_breakdown.demand_growth >= payload.market_and_niche.min_sales_growth_pct
+    const marginMatches = item.profit_margin_pct >= payload.financials.min_profit_margin_pct
+    const cogsMatches = item.base_cost <= payload.financials.max_base_cogs_cap
+    const priceMatches =
+      item.suggested_price >= payload.financials.target_retail_price_min &&
+      item.suggested_price <= payload.financials.target_retail_price_max
+
+    return categoryMatches && growthMatches && marginMatches && cogsMatches && priceMatches
+  })
+}
+
+export const analyzeOpportunities = async (payload: AnalyzeOpportunitiesPayload): Promise<AnalysisResult> => {
   const started = Date.now()
   const keyword =
     (payload.market_and_niche?.seed_keywords ?? []).join(' ') ||
@@ -138,7 +174,8 @@ export const analyzeOpportunities = async (payload: any | {
     // Gọi trực tiếp endpoint analyze thời gian thực
     const res = await api.post('/analyze', {
       query: keyword,
-      limit: 12,
+      limit: payload.limit,
+      data_source: payload.data_source,
       sources: ['tiktok', 'shopee', 'lazada', 'etsy', 'ebay', 'amazon'],
     })
 
@@ -157,6 +194,7 @@ export const analyzeOpportunities = async (payload: any | {
         const profit = +(s.unit_economics?.net_unit_profit || suggested - base).toFixed(2)
         const cat = s.category || guessCategory(title)
         const prodImg = s.image_url || s.img_url || resolveProductImage(title, cat)
+        const scoreBreakdown = normalizeScoreBreakdown(s.score_breakdown)
 
         return {
           id: s.id || `OPP-${index + 1}`,
@@ -165,7 +203,7 @@ export const analyzeOpportunities = async (payload: any | {
           target_niche: s.niche || `${keyword} / Custom POD`,
           image_url: prodImg,
           opportunity_score: s.opportunity_score,
-          score_breakdown: s.score_breakdown as any,
+          score_breakdown: scoreBreakdown,
           score_rationales: (s.score_rationales || s.rationales) as any,
           matched_sku: s.best_fit_sku || 'PW-DRINK-TUMB-20OZ',
           matched_product_name: SKU_NAMES[s.best_fit_sku] || s.best_fit_sku,
@@ -173,7 +211,7 @@ export const analyzeOpportunities = async (payload: any | {
           suggested_price: suggested,
           profit_margin_pct: s.profit_margin_pct,
           profit_per_unit: profit,
-          trend_velocity: `+${Math.round(s.score_breakdown.demand_growth || 80)}% sales growth`,
+          trend_velocity: `+${Math.round(scoreBreakdown.demand_growth)}% sales growth`,
           key_pain_point_solved:
             s.key_pain_point_solved ||
             s.pain_point_solved ||
@@ -185,7 +223,7 @@ export const analyzeOpportunities = async (payload: any | {
           ip_safety_status: cleanIp
             ? 'CLEAN_IP (95/100) — Generic keyword, safe for POD'
             : 'TRADEMARK_ALERT (45/100) — Brand keyword detected',
-          virality_hook_rating: `Potential: HIGH (${s.score_breakdown.tiktok_virality || 85}/100) — visual wow`,
+          virality_hook_rating: `Potential: HIGH (${scoreBreakdown.tiktok_virality}/100) — visual wow`,
           ai_design_prompt: `Professional vector concept art for ${title}, trending aesthetic 2026, print-ready --ar 1:1`,
           tiktok_hooks: [
             `If you're looking for the ultimate ${title.toLowerCase()}, stop buying cheap generic versions…`,
@@ -199,8 +237,9 @@ export const analyzeOpportunities = async (payload: any | {
         }
       })
 
+      const qualified = applyFrontendConstraints(opportunities, payload)
       return {
-        total_opportunities: opportunities.length,
+        total_opportunities: qualified.length,
         execution_time_ms: Date.now() - started,
         applied_strategy: preset.toUpperCase(),
         data_source_used: 'LIVE_CRAWL',
@@ -208,7 +247,7 @@ export const analyzeOpportunities = async (payload: any | {
           auto_crawl_full: true,
           marketplaces: ['tiktok', 'amazon', 'ebay', 'shopee', 'etsy', 'lazada'],
         },
-        opportunities,
+        opportunities: qualified,
       }
     }
   } catch (err) {
@@ -255,6 +294,7 @@ export const analyzeOpportunities = async (payload: any | {
     const profit = +(s.unit_economics?.net_unit_profit || suggested - base).toFixed(2)
     const cat = s.category || guessCategory(title)
     const prodImg = s.image_url || s.img_url || resolveProductImage(title, cat)
+    const scoreBreakdown = normalizeScoreBreakdown(s.score_breakdown)
 
     return {
       id: s.id || `OPP-${idx + 1}`,
@@ -263,7 +303,7 @@ export const analyzeOpportunities = async (payload: any | {
       target_niche: s.niche || `${keyword} / Custom POD`,
       image_url: prodImg,
       opportunity_score: s.opportunity_score,
-      score_breakdown: s.score_breakdown as any,
+      score_breakdown: scoreBreakdown,
       score_rationales: (s.score_rationales || s.rationales) as any,
       matched_sku: s.best_fit_sku || 'PW-DRINK-TUMB-20OZ',
       matched_product_name: SKU_NAMES[s.best_fit_sku] || s.best_fit_sku,
@@ -271,7 +311,7 @@ export const analyzeOpportunities = async (payload: any | {
       suggested_price: suggested,
       profit_margin_pct: s.profit_margin_pct,
       profit_per_unit: profit,
-      trend_velocity: `+${Math.round(s.score_breakdown.demand_growth || 80)}% sales growth`,
+      trend_velocity: `+${Math.round(scoreBreakdown.demand_growth)}% sales growth`,
       key_pain_point_solved:
         s.key_pain_point_solved ||
         s.pain_point_solved ||
@@ -283,7 +323,7 @@ export const analyzeOpportunities = async (payload: any | {
       ip_safety_status: cleanIp
         ? 'CLEAN_IP (95/100) — Generic keyword, safe for POD'
         : 'TRADEMARK_ALERT (45/100) — Brand keyword detected',
-      virality_hook_rating: `Potential: HIGH (${s.score_breakdown.tiktok_virality || 85}/100) — visual wow`,
+      virality_hook_rating: `Potential: HIGH (${scoreBreakdown.tiktok_virality}/100) — visual wow`,
       ai_design_prompt: `Professional vector concept art for ${title}, trending aesthetic 2026, print-ready --ar 1:1`,
       tiktok_hooks: [
         `If you're looking for the ultimate ${title.toLowerCase()}, stop buying cheap generic versions…`,
@@ -297,8 +337,9 @@ export const analyzeOpportunities = async (payload: any | {
     }
   })
 
+  const qualified = applyFrontendConstraints(opportunities, payload)
   return {
-    total_opportunities: opportunities.length,
+    total_opportunities: qualified.length,
     execution_time_ms: Date.now() - started,
     applied_strategy: preset.toUpperCase(),
     data_source_used: 'LIVE_CRAWL',
@@ -306,7 +347,7 @@ export const analyzeOpportunities = async (payload: any | {
       auto_crawl_full: true,
       marketplaces: ['tiktok', 'amazon', 'ebay', 'shopee', 'etsy', 'lazada'],
     },
-    opportunities,
+    opportunities: qualified,
   }
 }
 

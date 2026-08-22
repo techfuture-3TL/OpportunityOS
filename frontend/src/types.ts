@@ -1,5 +1,33 @@
 export type Strategy = 'VIRAL_TREND' | 'HIGH_MARGIN' | 'SAFE_EVERGREEN' | 'LOW_COMPETITION'
 
+export interface AnalyzeOpportunitiesPayload {
+  search_mode?: 'GUIDED' | 'DISCOVERY'
+  data_source: string
+  limit: number
+  market_and_niche: {
+    target_country: string
+    categories: string[]
+    seasonality: string
+    seed_keywords: string[]
+    target_brand?: string
+    selected_marketplaces: string[]
+    min_sales_growth_pct: number
+  }
+  financials: {
+    min_profit_margin_pct: number
+    target_retail_price_min: number
+    target_retail_price_max: number
+    max_base_cogs_cap: number
+    target_ad_budget: number
+  }
+  supply_chain: {
+    preferred_warehouse: string
+    allowed_techniques: string[]
+    max_production_days: number
+  }
+  strategy: { preset: Strategy }
+}
+
 export interface ScoreRationale {
   demand: string
   gap: string

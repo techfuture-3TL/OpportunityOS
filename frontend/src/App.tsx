@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, Suspense, lazy, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -8,7 +8,6 @@ import {
   ChevronUp,
   CircleDollarSign,
   Clapperboard,
-  Clipboard,
   Coffee,
   Crosshair,
   Crown,
@@ -22,6 +21,7 @@ import {
   LayoutGrid,
   Lightbulb,
   LoaderCircle,
+  Menu,
   Mountain,
   PackageCheck,
   Palette,
@@ -47,25 +47,10 @@ import {
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Line,
-  PolarAngleAxis,
-  PolarGrid,
-  Radar as RadarShape,
-  RadarChart,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { analyzeOpportunities, checkHealth, generateBrief } from "./api";
+import { analyzeOpportunities, checkHealth } from "./api";
 import type {
   AnalysisResult,
   Opportunity,
-  ProductBrief,
   ScoringDetail,
   Strategy,
 } from "./types";
@@ -73,6 +58,14 @@ import { useI18n } from "./i18n";
 import { cn } from "./lib/utils";
 
 type Screen = "discovery" | "goals" | "funnel" | "results";
+type TeamStage = "new" | "growth" | "scale";
+
+const LazyPriceChartCard = lazy(() =>
+  import("./OpportunityCharts").then((module) => ({ default: module.PriceChartCard })),
+);
+const LazyOpportunityRadar = lazy(() =>
+  import("./OpportunityCharts").then((module) => ({ default: module.OpportunityRadar })),
+);
 
 const initialFilters = {
   dataSource: "ALL",
@@ -90,6 +83,8 @@ const initialFilters = {
   warehouse: "US",
   techniques: ["LASER_ENGRAVING", "UV_PRINT"],
   productionDays: 3,
+  adBudget: 1000,
+  teamStage: "growth" as TeamStage,
   strategy: "VIRAL_TREND" as Strategy,
 };
 
@@ -101,20 +96,20 @@ const STRATEGY_WEIGHTS: Record<Strategy, Record<string, number>> = {
 };
 
 const categoryOptions = [
-  ["Drinkware", "Đồ uống"],
-  ["Apparel", "Thời trang"],
-  ["Home_Decor", "Trang trí nhà"],
-  ["Pet_Accessories", "Phụ kiện thú cưng"],
-  ["Gifts", "Quà tặng"],
-  ["Outdoor_Sports", "Thể thao ngoài trời"],
+  ["Drinkware", "Đồ uống", "Drinkware"],
+  ["Apparel", "Thời trang", "Apparel"],
+  ["Home_Decor", "Trang trí nhà", "Home decor"],
+  ["Pet_Accessories", "Phụ kiện thú cưng", "Pet accessories"],
+  ["Gifts", "Quà tặng", "Gifts"],
+  ["Outdoor_Sports", "Thể thao ngoài trời", "Outdoor sports"],
 ] as const;
 
 const techniqueOptions = [
-  ["LASER_ENGRAVING", "Khắc laser"],
-  ["UV_PRINT", "In UV"],
-  ["DTG", "DTG"],
-  ["EMBROIDERY", "Thêu"],
-  ["SUBLIMATION", "In chuyển nhiệt"],
+  ["LASER_ENGRAVING", "Khắc laser", "Laser engraving"],
+  ["UV_PRINT", "In UV", "UV printing"],
+  ["DTG", "DTG", "DTG"],
+  ["EMBROIDERY", "Thêu", "Embroidery"],
+  ["SUBLIMATION", "In chuyển nhiệt", "Sublimation"],
 ] as const;
 
 const strategies: { id: Strategy; icon: LucideIcon; labelVi: string; labelEn: string; copyVi: string; copyEn: string }[] = [
@@ -168,10 +163,9 @@ function money(value: number) {
     currency: "USD",
   }).format(value);
 }
-function categoryName(category: string) {
-  return (
-    Object.fromEntries(categoryOptions)[category] ?? category.replace("_", " ")
-  );
+function categoryName(category: string, lang: "vi" | "en" = "vi") {
+  const option = categoryOptions.find(([value]) => value.toLowerCase() === category.toLowerCase());
+  return option ? (lang === "vi" ? option[1] : option[2]) : category.replace(/_/g, " ");
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -189,6 +183,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkHealth()
@@ -196,7 +191,44 @@ export default function App() {
       .catch(() => setHealth("offline"));
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen && !selected) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (selected) setSelected(null);
+      else setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [mobileMenuOpen, selected]);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const closeDrawerOnDesktop = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (event.matches) setMobileMenuOpen(false);
+    };
+    closeDrawerOnDesktop(desktopQuery);
+    desktopQuery.addEventListener("change", closeDrawerOnDesktop);
+    return () => desktopQuery.removeEventListener("change", closeDrawerOnDesktop);
+  }, []);
+
   const submitAnalysis = async (overrideKeyword?: string) => {
+    if (filters.priceMin > filters.priceMax) {
+      setError(
+        t(
+          "Giá bán tối thiểu không thể lớn hơn giá bán tối đa.",
+          "Minimum retail price cannot be greater than maximum retail price.",
+        ),
+      );
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -222,7 +254,7 @@ export default function App() {
           target_retail_price_min: filters.priceMin,
           target_retail_price_max: filters.priceMax,
           max_base_cogs_cap: filters.cogs,
-          target_ad_budget: 1000,
+          target_ad_budget: filters.adBudget,
         },
         supply_chain: {
           preferred_warehouse: filters.warehouse,
@@ -237,8 +269,8 @@ export default function App() {
       setError(
         requestError instanceof Error
           ? t(
-              "Không thể kết nối OpportunityOS API (vps.nexora-flow.cloud). Hãy kiểm tra backend rồi thử lại.",
-              "Cannot reach the OpportunityOS API (vps.nexora-flow.cloud). Check the backend and retry.",
+              "Không thể kết nối dịch vụ phân tích. Hãy kiểm tra backend rồi thử lại.",
+              "Cannot reach the analysis service. Check the backend and retry.",
             )
           : t("Chưa thể phân tích cơ hội vào lúc này.", "Could not analyze opportunities right now."),
       );
@@ -251,24 +283,35 @@ export default function App() {
     setScreen("discovery");
     setError("");
     setFilters(initialFilters);
+    setAnalysis(null);
+    setSelected(null);
+    setMobileMenuOpen(false);
   };
 
   return (
-    <main className="flex h-screen overflow-hidden bg-[#fafaf9] text-[#1c1917]">
+    <main className="flex h-dvh min-h-0 overflow-hidden bg-[#fafaf9] text-[#1c1917]">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
         filters={filters}
         setFilters={setFilters}
         screen={screen}
         setScreen={setScreen}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar health={health} screen={screen} onReset={enterCopilot} />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <TopBar
+          health={health}
+          screen={screen}
+          onReset={enterCopilot}
+          onOpenMobile={() => setMobileMenuOpen(true)}
+          mobileOpen={mobileMenuOpen}
+        />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1240px] px-6 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-8">
+          <div className="mx-auto w-full max-w-[1240px] p-5 sm:p-7 lg:px-10 lg:py-9">
             {screen === "discovery" && (
               <Discovery
                 loading={loading}
@@ -306,8 +349,6 @@ export default function App() {
             {screen === "results" && (
               <Results
                 analysis={analysis}
-                filters={filters}
-                setFilters={setFilters}
                 loading={loading}
                 error={error}
                 onAnalyze={() => submitAnalysis()}
@@ -340,16 +381,20 @@ function LogoMark({ size = 36 }: { size?: number }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   TOP BAR — stepper + ngôn ngữ + trạng thái
+   TOP BAR — stepper + ngôn ngữ + trạng thái + mobile toggle
    ═══════════════════════════════════════════════════════════════════ */
 function TopBar({
   health,
   screen,
   onReset,
+  onOpenMobile,
+  mobileOpen,
 }: {
   health: "checking" | "online" | "offline";
   screen: Screen;
   onReset: () => void;
+  onOpenMobile: () => void;
+  mobileOpen: boolean;
 }) {
   const { t, lang, setLang } = useI18n();
   const steps: { id: Screen; labelVi: string; labelEn: string }[] = [
@@ -361,45 +406,73 @@ function TopBar({
   const activeIdx = steps.findIndex((step) => step.id === screen);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[#e7e5e4] bg-white px-5">
-      <div className="flex items-center gap-2.5">
-        {steps.map((step, idx) => {
-          const state = idx < activeIdx ? "done" : idx === activeIdx ? "active" : "todo";
-          return (
-            <div key={step.id} className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "step-dot",
-                  state === "active" && "step-dot-active",
-                  state === "done" && "step-dot-done",
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[#e7e5e4] bg-white px-3 sm:px-5 lg:h-16">
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        {/* Mobile menu hamburger button */}
+        <button
+          onClick={onOpenMobile}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#e7e5e4] text-[#1c1917] transition hover:border-[#b72727]/40 hover:text-[#b72727] lg:hidden"
+          title={t("Mở menu", "Open menu")}
+          aria-label={t("Mở menu", "Open menu")}
+          aria-controls="mobile-navigation"
+          aria-expanded={mobileOpen}
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+
+        {/* Desktop / Tablet Stepper */}
+        <div className="hidden md:flex items-center gap-2 lg:gap-2.5">
+          {steps.map((step, idx) => {
+            const state = idx < activeIdx ? "done" : idx === activeIdx ? "active" : "todo";
+            return (
+              <div key={step.id} className="flex items-center gap-1.5 lg:gap-2.5">
+                <div
+                  className={cn(
+                    "step-dot",
+                    state === "active" && "step-dot-active",
+                    state === "done" && "step-dot-done",
+                  )}
+                >
+                  {state === "done" ? <Check className="h-3 w-3" /> : idx + 1}
+                </div>
+                <span
+                  className={cn(
+                    "text-[11px] font-bold",
+                    state === "active" ? "text-[#1c1917]" : state === "done" ? "text-[#b72727]" : "t-3",
+                  )}
+                >
+                  {t(step.labelVi, step.labelEn)}
+                </span>
+                {idx < steps.length - 1 && (
+                  <div className={cn("step-line", state === "done" && "step-line-done")} />
                 )}
-              >
-                {state === "done" ? <Check className="h-3 w-3" /> : idx + 1}
               </div>
-              <span
-                className={cn(
-                  "text-[11px] font-bold",
-                  state === "active" ? "text-[#1c1917]" : state === "done" ? "text-[#b72727]" : "t-3",
-                )}
-              >
-                {t(step.labelVi, step.labelEn)}
-              </span>
-              {idx < steps.length - 1 && (
-                <div className={cn("step-line", state === "done" && "step-line-done")} />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* Mobile compact stepper */}
+        <div className="flex md:hidden items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#fdf3f3] border border-[#fecaca] px-2 py-0.5 font-mono text-[10px] font-bold text-[#b72727]">
+            {activeIdx + 1}/4
+          </span>
+          <span className="text-xs font-bold text-[#1c1917] truncate max-w-[110px] sm:max-w-[180px]">
+            {t(steps[activeIdx]?.labelVi ?? "", steps[activeIdx]?.labelEn ?? "")}
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2.5">
-        <span className="hidden items-center gap-2 rounded-full border border-[#e7e5e4] bg-[#fafaf9] px-3 py-1.5 text-[11px] font-semibold t-2 xl:inline-flex">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <span className="hidden xl:inline-flex items-center gap-2 rounded-full border border-[#e7e5e4] bg-[#fafaf9] px-3 py-1.5 text-[11px] font-semibold t-2">
           <Database className="h-3.5 w-3.5 text-[#b72727]" />
           {t("2,091 tín hiệu · auto crawl 6 sàn", "2,091 signals · auto-crawl 6 marketplaces")}
         </span>
         <span
+          role="status"
+          aria-live="polite"
+          aria-label={health === "online" ? t("Hệ thống trực tuyến", "System online") : health === "checking" ? t("Đang kiểm tra kết nối", "Checking connection") : t("Hệ thống ngoại tuyến", "System offline")}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold",
+            "inline-flex items-center gap-1.5 rounded-full border px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold",
             health === "online"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
               : "border-amber-200 bg-amber-50 text-amber-700",
@@ -407,32 +480,38 @@ function TopBar({
         >
           <i
             className={cn(
-              "h-1.5 w-1.5 rounded-full",
+              "h-1.5 w-1.5 rounded-full shrink-0",
               health === "online" ? "pulse-dot bg-emerald-500" : "animate-pulse bg-amber-500",
             )}
           />
-          {health === "online" ? t("Online", "Online") : health === "checking" ? t("Đang kết nối", "Connecting") : t("Offline", "Offline")}
+          <span className="hidden sm:inline">
+            {health === "online" ? t("Online", "Online") : health === "checking" ? t("Đang kết nối", "Connecting") : t("Offline", "Offline")}
+          </span>
         </span>
 
         {/* Language toggle */}
         <div className="seg !p-0.5">
           <button
             onClick={() => setLang("vi")}
-            className={cn("seg-btn !px-2.5 !py-1 !text-[11px]", lang === "vi" && "seg-btn-active")}
+            aria-pressed={lang === "vi"}
+            aria-label={t("Chuyển sang tiếng Việt", "Switch to Vietnamese")}
+            className={cn("seg-btn !px-2 sm:!px-2.5 !py-1 !text-[10px] sm:!text-[11px]", lang === "vi" && "seg-btn-active")}
           >
             VI
           </button>
           <button
             onClick={() => setLang("en")}
-            className={cn("seg-btn !px-2.5 !py-1 !text-[11px]", lang === "en" && "seg-btn-active")}
+            aria-pressed={lang === "en"}
+            aria-label={t("Chuyển sang tiếng Anh", "Switch to English")}
+            className={cn("seg-btn !px-2 sm:!px-2.5 !py-1 !text-[10px] sm:!text-[11px]", lang === "en" && "seg-btn-active")}
           >
             EN
           </button>
         </div>
 
-        <button onClick={onReset} className="btn-ghost !px-3.5 !py-1.5 !text-[11px]">
-          <RefreshCcw className="h-3 w-3" />
-          {t("Bắt đầu lại", "Restart")}
+        <button onClick={onReset} className="btn-ghost !px-2.5 sm:!px-3.5 !py-1.5 !text-[11px]" title={t("Bắt đầu lại", "Restart")} aria-label={t("Bắt đầu lại", "Restart")}>
+          <RefreshCcw className="h-3 w-3 shrink-0" />
+          <span className="hidden sm:inline">{t("Bắt đầu lại", "Restart")}</span>
         </button>
       </div>
     </header>
@@ -440,11 +519,13 @@ function TopBar({
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SIDEBAR — full height, không chọn thị trường (auto crawl full)
+   SIDEBAR — Desktop Collapsible + Mobile Offcanvas Drawer
    ═══════════════════════════════════════════════════════════════════ */
 function Sidebar({
   collapsed,
   onToggleCollapse,
+  mobileOpen,
+  onCloseMobile,
   filters,
   setFilters,
   screen,
@@ -452,6 +533,8 @@ function Sidebar({
 }: {
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
   filters: typeof initialFilters;
   setFilters: React.Dispatch<React.SetStateAction<typeof initialFilters>>;
   screen: Screen;
@@ -479,42 +562,14 @@ function Sidebar({
     { id: "etsy", label: "Etsy", icon: Palette },
   ];
 
-  if (collapsed) {
-    return (
-      <aside className="flex w-[60px] shrink-0 select-none flex-col items-center justify-between border-r border-[#e7e5e4] bg-white py-4">
-        <div className="flex flex-col items-center gap-3">
-          <button
-            onClick={onToggleCollapse}
-            className="grid h-8 w-8 place-items-center rounded-lg border border-[#e7e5e4] text-[#b72727] transition hover:border-[#b72727]/40"
-            title="Expand sidebar"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </button>
-          <LogoMark size={30} />
-          <div className="h-px w-7 bg-[#e7e5e4]" />
-          {steps.map((step) => (
-            <button
-              key={step.id}
-              onClick={() => setScreen(step.id)}
-              className={cn(
-                "grid h-9 w-9 place-items-center rounded-xl transition",
-                screen === step.id
-                  ? "bg-[#b72727] text-white"
-                  : "text-[#a8a29e] hover:bg-[#f5f5f4] hover:text-[#1c1917]",
-              )}
-              title={t(step.labelVi, step.labelEn)}
-            >
-              <step.icon className="h-4 w-4" />
-            </button>
-          ))}
-        </div>
-      </aside>
-    );
-  }
+  const handleStepClick = (stepId: Screen) => {
+    setScreen(stepId);
+    onCloseMobile?.();
+  };
 
-  return (
-    <aside className="flex w-[280px] shrink-0 select-none flex-col border-r border-[#e7e5e4] bg-white">
-      <div className="flex items-center gap-3 border-b border-[#e7e5e4] px-4 py-4">
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
+      <div className="flex h-[100px] shrink-0 items-center gap-3 border-b border-[#e7e5e4] px-6">
         <LogoMark size={36} />
         <div className="min-w-0 flex-1">
           <strong className="block text-[15px] font-extrabold tracking-tight text-[#1c1917]">
@@ -524,30 +579,42 @@ function Sidebar({
             {t("Nghiên cứu · Quyết định · Sản xuất", "Research · Decide · Produce")}
           </small>
         </div>
+        {/* Desktop collapse button */}
         <button
           onClick={onToggleCollapse}
-          className="grid h-7 w-7 place-items-center rounded-lg border border-[#e7e5e4] text-[10px] text-[#a8a29e] transition hover:border-[#b72727]/40 hover:text-[#b72727]"
-          title="Collapse"
+          className="hidden lg:grid h-7 w-7 place-items-center rounded-lg border border-[#e7e5e4] text-[10px] text-[#a8a29e] transition hover:border-[#b72727]/40 hover:text-[#b72727]"
+          title={t("Thu gọn thanh bên", "Collapse sidebar")}
+          aria-label={t("Thu gọn thanh bên", "Collapse sidebar")}
         >
           <ArrowRight className="h-3.5 w-3.5 rotate-180" />
         </button>
+        {/* Mobile close button */}
+        <button
+          onClick={onCloseMobile}
+          className="grid lg:hidden h-8 w-8 place-items-center rounded-lg border border-[#e7e5e4] text-[#78716c] transition hover:border-[#b72727] hover:text-[#b72727]"
+          title={t("Đóng menu", "Close navigation")}
+          aria-label={t("Đóng menu", "Close navigation")}
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto p-4">
+      <div className="flex-1 space-y-8 overflow-y-auto px-4 pb-4 pt-6">
         <SideSection title={t("Hành trình", "Journey")}>
           <div className="space-y-1">
             {steps.map((step, idx) => (
               <button
                 key={step.id}
-                onClick={() => setScreen(step.id)}
+                onClick={() => handleStepClick(step.id)}
+                aria-current={screen === step.id ? "page" : undefined}
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition",
+                  "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition",
                   screen === step.id ? "bg-[#fdf3f3]" : "hover:bg-[#f5f5f4]",
                 )}
               >
                 <span
                   className={cn(
-                    "grid h-7 w-7 shrink-0 place-items-center rounded-lg font-mono text-[10.5px] font-bold transition",
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-lg font-mono text-[11px] font-bold transition",
                     screen === step.id
                       ? "bg-[#b72727] text-white"
                       : "border border-[#e7e5e4] bg-white text-[#a8a29e]",
@@ -555,7 +622,7 @@ function Sidebar({
                 >
                   {idx + 1}
                 </span>
-                <span className={cn("text-[12.5px] font-bold", screen === step.id ? "text-[#b72727]" : "t-2")}>
+                <span className={cn("text-[13px] font-bold", screen === step.id ? "text-[#b72727]" : "t-2")}>
                   {t(step.labelVi, step.labelEn)}
                 </span>
               </button>
@@ -563,7 +630,7 @@ function Sidebar({
           </div>
         </SideSection>
 
-        {/* Nguồn dữ liệu 2 cột chuẩn Image 2 */}
+        {/* Nguồn dữ liệu 2 cột */}
         <SideSection title={t("Nguồn dữ liệu", "Data sources")}>
           <div className="grid grid-cols-2 gap-1.5">
             {marketList.map((mkt) => (
@@ -586,6 +653,7 @@ function Sidebar({
         {/* Kho phôi */}
         <SideSection title={t("Kho phôi (Fulfillment)", "Blank warehouse")}>
           <select
+            aria-label={t("Kho phôi ưu tiên", "Preferred blank warehouse")}
             value={filters.warehouse}
             onChange={(e) => update("warehouse", e.target.value)}
             className="select !py-2 !text-[12px]"
@@ -604,6 +672,8 @@ function Sidebar({
           </div>
           <input
             type="range"
+            aria-label={t("Biên lợi nhuận gộp", "Gross margin")}
+            aria-valuetext={`${filters.margin}%`}
             min="20"
             max="80"
             value={filters.margin}
@@ -618,8 +688,11 @@ function Sidebar({
               <label className="field-label !text-[9.5px]">{t("Trần COGS ($)", "COGS cap ($)")}</label>
               <input
                 type="number"
+                min="0"
+                step="0.5"
+                aria-label={t("Trần giá vốn phôi", "Blank cost cap")}
                 value={filters.cogs}
-                onChange={(e) => update("cogs", Number(e.target.value) || 15)}
+                onChange={(e) => update("cogs", Math.max(0, Number(e.target.value)))}
                 className="input mt-1 !px-2.5 !py-1.5 !text-[12px] font-bold"
               />
             </div>
@@ -627,8 +700,11 @@ function Sidebar({
               <label className="field-label !text-[9.5px]">{t("Giá min ($)", "Min price ($)")}</label>
               <input
                 type="number"
+                min="0"
+                step="0.5"
+                aria-label={t("Giá bán tối thiểu", "Minimum retail price")}
                 value={filters.priceMin}
-                onChange={(e) => update("priceMin", Number(e.target.value) || 20)}
+                onChange={(e) => update("priceMin", Math.max(0, Number(e.target.value)))}
                 className="input mt-1 !px-2.5 !py-1.5 !text-[12px] font-bold"
               />
             </div>
@@ -643,6 +719,7 @@ function Sidebar({
                 key={st.id}
                 type="button"
                 onClick={() => update("strategy", st.id)}
+                aria-pressed={filters.strategy === st.id}
                 className={cn(
                   "flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition",
                   filters.strategy === st.id
@@ -662,17 +739,79 @@ function Sidebar({
         </SideSection>
       </div>
 
-      <div className="border-t border-[#e7e5e4] px-4 py-3">
+      <div className="shrink-0 border-t border-[#e7e5e4] px-4 py-4">
         <button
           type="button"
           onClick={() => setFilters(initialFilters)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-white px-3 py-2 text-xs font-semibold text-[#78716c] transition hover:border-[#b72727] hover:bg-[#fafaf9] hover:text-[#b72727]"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#e7e5e4] bg-white px-3 py-3 text-xs font-semibold text-[#78716c] transition hover:border-[#b72727] hover:bg-[#fafaf9] hover:text-[#b72727]"
         >
           <RefreshCcw className="h-3.5 w-3.5" />
           {t("Đặt lại bộ lọc", "Reset filters")}
         </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+          <div
+            id="mobile-navigation"
+            className="relative z-10 flex h-full w-[290px] max-w-[85vw] flex-col bg-white shadow-2xl animate-slide-in-left"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("Điều hướng và bộ lọc", "Navigation and filters")}
+          >
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      {collapsed ? (
+        <aside className="hidden lg:flex w-[60px] shrink-0 select-none flex-col items-center justify-between border-r border-[#e7e5e4] bg-white py-4">
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={onToggleCollapse}
+              className="grid h-8 w-8 place-items-center rounded-lg border border-[#e7e5e4] text-[#b72727] transition hover:border-[#b72727]/40"
+              title={t("Mở rộng thanh bên", "Expand sidebar")}
+              aria-label={t("Mở rộng thanh bên", "Expand sidebar")}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            <LogoMark size={30} />
+            <div className="h-px w-7 bg-[#e7e5e4]" />
+            {steps.map((step) => (
+              <button
+                key={step.id}
+                onClick={() => setScreen(step.id)}
+                aria-current={screen === step.id ? "page" : undefined}
+                className={cn(
+                  "grid h-9 w-9 place-items-center rounded-xl transition",
+                  screen === step.id
+                    ? "bg-[#b72727] text-white"
+                    : "text-[#a8a29e] hover:bg-[#f5f5f4] hover:text-[#1c1917]",
+                )}
+                title={t(step.labelVi, step.labelEn)}
+              >
+                <step.icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+        </aside>
+      ) : (
+        <aside className="hidden w-[300px] shrink-0 select-none flex-col border-r border-[#e7e5e4] bg-white lg:flex">
+          {sidebarContent}
+        </aside>
+      )}
+    </>
   );
 }
 
@@ -715,8 +854,10 @@ function Discovery({
   onAnalyze: (keyword: string, brand?: string) => void;
 }) {
   const { t, lang } = useI18n();
-  const [keyword, setKeyword] = useState(filters.keyword);
-  const [brand, setBrand] = useState(filters.targetBrand || "");
+  const keyword = filters.keyword;
+  const brand = filters.targetBrand || "";
+  const setKeyword = (value: string) => setFilters((current) => ({ ...current, keyword: value }));
+  const setBrand = (value: string) => setFilters((current) => ({ ...current, targetBrand: value }));
   const [searchMode, setSearchMode] = useState<"KEYWORD" | "BRAND">(
     filters.targetBrand ? "BRAND" : "KEYWORD"
   );
@@ -817,23 +958,23 @@ function Discovery({
       <p className="eyebrow">
         {t("01 · Khám phá ý tưởng & xu hướng thị trường", "01 · Discover ideas & market trends")}
       </p>
-      <h1 className="mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1c1917] sm:text-5xl">
+      <h1 className="mt-3 sm:mt-4 max-w-3xl text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.12] tracking-tight text-[#1c1917]">
         {lang === "vi" ? (
           <>Tìm thấy sản phẩm tiếp theo <span className="text-[#b72727]">đáng để làm.</span></>
         ) : (
           <>Find the next product <span className="text-[#b72727]">worth making.</span></>
         )}
       </h1>
-      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed t-2">
+      <p className="mt-3 sm:mt-4 max-w-2xl text-sm sm:text-[15px] leading-relaxed t-2">
         {t(
           "Tự động quét full 6 sàn TMĐT cùng 2,091 tín hiệu nhu cầu, ghép với kho phôi Printway bằng mô hình MCDA 6 trụ cột — biến ý tưởng thành sản phẩm thắng trong vài giây.",
           "Auto-crawl all 6 marketplaces and 2,091 demand signals, match them with Printway blanks using the 6-pillar MCDA model — turn ideas into winning products in seconds.",
         )}
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-2.5">
+      <div className="mt-5 sm:mt-6 flex flex-wrap gap-2 sm:gap-2.5">
         {[
-          [Zap, t("Auto crawl full 6 sàn TMĐT", "Auto-crawl all 5 marketplaces")],
+          [Zap, t("Auto crawl full 6 sàn TMĐT", "Auto-crawl all 6 marketplaces")],
           [Database, t("2,091 tín hiệu nhu cầu CSV", "2,091 CSV demand signals")],
           [Factory, t("Kho phôi Printway tích hợp", "Printway blank catalog")],
           [Flame, t("Chấm điểm MCDA 6 trụ cột", "6-pillar MCDA scoring")],
@@ -852,7 +993,8 @@ function Discovery({
         <button
           type="button"
           onClick={() => { setSearchMode("KEYWORD"); setValidationMsg(""); }}
-          className={cn("seg-btn", searchMode === "KEYWORD" && "seg-btn-active")}
+          aria-pressed={searchMode === "KEYWORD"}
+          className={cn("seg-btn min-w-0 flex-1 !whitespace-normal", searchMode === "KEYWORD" && "seg-btn-active")}
         >
           <Search className="h-3.5 w-3.5" />
           {t("Theo từ khóa & ngách", "By keyword & niche")}
@@ -860,7 +1002,8 @@ function Discovery({
         <button
           type="button"
           onClick={() => { setSearchMode("BRAND"); setValidationMsg(""); }}
-          className={cn("seg-btn", searchMode === "BRAND" && "seg-btn-active")}
+          aria-pressed={searchMode === "BRAND"}
+          className={cn("seg-btn min-w-0 flex-1 !whitespace-normal", searchMode === "BRAND" && "seg-btn-active")}
         >
           <Target className="h-3.5 w-3.5" />
           {t("Theo hãng / thương hiệu", "By brand")}
@@ -868,10 +1011,10 @@ function Discovery({
       </div>
 
       <form
-        className="card mt-4 flex flex-col gap-2 p-3 transition focus-within:border-[#b72727] focus-within:shadow-[0_0_0_3px_rgba(183,39,39,0.08)] sm:flex-row sm:items-center"
+        className="card mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 sm:p-3 transition focus-within:border-[#b72727] focus-within:shadow-[0_0_0_3px_rgba(183,39,39,0.08)]"
         onSubmit={handleSearchSubmit}
       >
-        <label className="flex flex-1 items-center gap-3 px-3">
+        <label className="flex flex-1 items-center gap-3 px-2 sm:px-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#b72727]">
             {searchMode === "BRAND" ? (
               <Target className="h-4 w-4 text-white" />
@@ -880,13 +1023,17 @@ function Discovery({
             )}
           </span>
           <input
+            name={searchMode === "BRAND" ? "brand" : "keyword"}
             value={searchMode === "BRAND" ? brand : keyword}
             onChange={(event) => {
               if (searchMode === "BRAND") setBrand(event.target.value);
               else setKeyword(event.target.value);
               if (validationMsg) setValidationMsg("");
             }}
-            className="min-w-0 flex-1 bg-transparent py-2.5 text-[15px] text-[#1c1917] outline-none placeholder:text-[#a8a29e]"
+            className="min-w-0 flex-1 bg-transparent py-2 sm:py-2.5 text-sm sm:text-[15px] text-[#1c1917] outline-none placeholder:text-[#a8a29e]"
+            aria-label={searchMode === "BRAND" ? t("Tên hãng hoặc thương hiệu", "Brand name") : t("Từ khóa hoặc ngách sản phẩm", "Product keyword or niche")}
+            aria-invalid={Boolean(validationMsg)}
+            aria-describedby={validationMsg ? "discovery-validation" : undefined}
             placeholder={
               searchMode === "BRAND"
                 ? t(
@@ -898,10 +1045,9 @@ function Discovery({
                     "e.g. insulated bottle, pet gifts, halloween mug, pickleball…",
                   )
             }
-            
           />
         </label>
-        <button className="btn-primary !px-6 !py-3 text-sm" disabled={loading}>
+        <button className="btn-primary !px-6 !py-3 text-sm w-full sm:w-auto" disabled={loading}>
           {loading ? (
             <>
               <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -919,18 +1065,18 @@ function Discovery({
       </form>
 
       {validationMsg && (
-        <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#b45309]">
+        <p id="discovery-validation" role="alert" className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#b45309]">
           <ShieldCheck className="h-3.5 w-3.5" />
           {validationMsg}
         </p>
       )}
 
       {error && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border border-[#f3d6d6] bg-[#fdf3f3] px-4 py-2.5 text-xs text-[#b72727]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#f3d6d6] bg-[#fdf3f3] px-4 py-2.5 text-xs text-[#b72727]">
           <span>{error}</span>
           <button
             onClick={() => onAnalyze(keyword || brand || "Bình giữ nhiệt", brand || undefined)}
-            className="ml-3 font-bold underline underline-offset-2 hover:text-[#9a1f1f]"
+            className="font-bold underline underline-offset-2 hover:text-[#9a1f1f]"
           >
             {t("Thử lại", "Retry")}
           </button>
@@ -945,7 +1091,7 @@ function Discovery({
               {t("Chọn nhanh hãng / thương hiệu thịnh hành", "Quick pick trending brands")}
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {popularBrands.map((b, idx) => (
               <button
                 key={b.name}
@@ -1004,7 +1150,7 @@ function Discovery({
       )}
 
       <div className="mt-10">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.14em] t-3">
             <TrendingUp className="h-3.5 w-3.5 text-[#b72727]" />
             {t("Top 4 ngách nổi bật từ 2,091 tín hiệu thị trường", "Top 4 niches from 2,091 market signals")}
@@ -1015,7 +1161,7 @@ function Discovery({
           </span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
           {trendingNiches.map((niche, idx) => (
             <button
               key={niche.topic}
@@ -1076,7 +1222,7 @@ function Discovery({
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SCREEN 02 — GOALS (bỏ chọn thị trường, chỉ còn 2 câu hỏi)
+   SCREEN 02 — GOALS
    ═══════════════════════════════════════════════════════════════════ */
 function GoalsSetup({
   filters,
@@ -1090,13 +1236,11 @@ function GoalsSetup({
   onNext: () => void;
 }) {
   const { t, lang } = useI18n();
-  const [stage, setStage] = useState("growth");
-  const [budget, setBudget] = useState(1000);
 
-  const chooseStage = (next: string) => {
-    setStage(next);
+  const chooseStage = (next: TeamStage) => {
     setFilters((current) => ({
       ...current,
+      teamStage: next,
       strategy:
         next === "new"
           ? "SAFE_EVERGREEN"
@@ -1111,23 +1255,23 @@ function GoalsSetup({
       <p className="eyebrow">
         {t("02 · Thiết lập mục tiêu & quy mô dự án", "02 · Set goals & project scale")}
       </p>
-      <h1 className="mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1c1917] sm:text-5xl">
+      <h1 className="mt-3 sm:mt-4 max-w-3xl text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.12] tracking-tight text-[#1c1917]">
         {lang === "vi" ? (
           <>Tùy chỉnh chiến lược theo <span className="text-[#b72727]">nguồn lực của bạn.</span></>
         ) : (
           <>Tailor the strategy to <span className="text-[#b72727]">your resources.</span></>
         )}
       </h1>
-      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed t-2">
+      <p className="mt-3 sm:mt-4 max-w-2xl text-sm sm:text-[15px] leading-relaxed t-2">
         {t(
           "Hai câu hỏi giúp hệ thống tinh chỉnh trọng số 6 trụ cột MCDA phù hợp với đội ngũ bạn.",
           "Two questions to tune the 6-pillar MCDA weights to your team.",
         )}
       </p>
 
-      <div className="mt-8 grid gap-5 md:grid-cols-2">
+      <div className="mt-6 sm:mt-8 grid gap-5 grid-cols-1 md:grid-cols-2">
         {/* Card 1: Team stage */}
-        <div className="card card-hover p-5 animate-fade-up d-1">
+        <div className="card card-hover p-4 sm:p-5 animate-fade-up d-1">
           <div className="flex items-center gap-3">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#b72727] font-mono text-xs font-bold text-white">
               01
@@ -1143,24 +1287,24 @@ function GoalsSetup({
             )}
           </p>
           <div className="mt-4 space-y-2">
-            {[
+            {([
               { id: "new", icon: Sprout, titleVi: "Mới bắt đầu", titleEn: "Just starting", copyVi: "Sản phẩm đầu tiên — ít rủi ro, an toàn IP tuyệt đối", copyEn: "First product — low risk, absolute IP safety" },
               { id: "growth", icon: TrendingUp, titleVi: "Đang tăng trưởng", titleEn: "Growing", copyVi: "Biên lãi gộp dày > 70%, đệm tiền > $12", copyEn: "Thick margins > 70%, cushion > $12" },
               { id: "scale", icon: Rocket, titleVi: "Mở rộng quy mô", titleEn: "Scaling", copyVi: "Bắt hot trend TikTok Shop bùng nổ đơn hàng", copyEn: "Ride TikTok Shop hot trends for order bursts" },
-            ].map((opt) => (
+            ] as const).map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => chooseStage(opt.id)}
                 className={cn(
                   "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition",
-                  stage === opt.id
+                  filters.teamStage === opt.id
                     ? "border-[#b72727] bg-[#fdf3f3]"
                     : "border-[#e7e5e4] bg-white hover:border-[#d6d3d1]",
                 )}
               >
-                <opt.icon className={cn("mt-0.5 h-4 w-4 shrink-0", stage === opt.id ? "text-[#b72727]" : "text-[#a8a29e]")} />
+                <opt.icon className={cn("mt-0.5 h-4 w-4 shrink-0", filters.teamStage === opt.id ? "text-[#b72727]" : "text-[#a8a29e]")} />
                 <span>
-                  <strong className={cn("block text-xs font-bold", stage === opt.id ? "text-[#b72727]" : "text-[#1c1917]")}>
+                  <strong className={cn("block text-xs font-bold", filters.teamStage === opt.id ? "text-[#b72727]" : "text-[#1c1917]")}>
                     {t(opt.titleVi, opt.titleEn)}
                   </strong>
                   <span className="mt-0.5 block text-[11px] leading-tight t-3">{t(opt.copyVi, opt.copyEn)}</span>
@@ -1171,7 +1315,7 @@ function GoalsSetup({
         </div>
 
         {/* Card 2: Budget & COGS */}
-        <div className="card card-hover p-5 animate-fade-up d-2">
+        <div className="card card-hover p-4 sm:p-5 animate-fade-up d-2">
           <div className="flex items-center gap-3">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#b72727] font-mono text-xs font-bold text-white">
               02
@@ -1188,34 +1332,41 @@ function GoalsSetup({
           </p>
           <div className="mt-4 space-y-3.5">
             <div>
-              <label className="field-label flex items-center gap-1.5">
+              <label htmlFor="ad-budget" className="field-label flex items-center gap-1.5">
                 <Wallet className="h-3 w-3 text-[#b72727]" />
                 {t("Ngân sách quảng cáo dự kiến ($)", "Planned ad budget ($)")}
               </label>
               <input
+                id="ad-budget"
                 type="number"
-                value={budget}
-                onChange={(e) => setBudget(Number(e.target.value) || 0)}
+                min="0"
+                step="100"
+                value={filters.adBudget}
+                onChange={(e) => setFilters((current) => ({ ...current, adBudget: Math.max(0, Number(e.target.value)) }))}
                 className="input mt-1.5"
                 placeholder="500, 1000, 5000…"
               />
             </div>
             <div>
-              <label className="field-label">{t("Giá vốn phôi tối đa ($)", "Max blank cost ($)")}</label>
+              <label htmlFor="goal-cogs" className="field-label">{t("Giá vốn phôi tối đa ($)", "Max blank cost ($)")}</label>
               <input
+                id="goal-cogs"
                 type="number"
+                min="0"
+                step="0.5"
                 value={filters.cogs}
-                onChange={(e) => setFilters((c) => ({ ...c, cogs: Number(e.target.value) || 15 }))}
+                onChange={(e) => setFilters((c) => ({ ...c, cogs: Math.max(0, Number(e.target.value)) }))}
                 className="input mt-1.5"
                 placeholder="15"
               />
             </div>
             <div>
               <div className="flex items-center justify-between">
-                <label className="field-label">{t("Biên lãi gộp tối thiểu", "Min gross margin")}</label>
+                <label htmlFor="goal-margin" className="field-label">{t("Biên lãi gộp tối thiểu", "Min gross margin")}</label>
                 <span className="font-mono text-sm font-bold text-[#b72727]">{filters.margin}%</span>
               </div>
               <input
+                id="goal-margin"
                 type="range"
                 min="20"
                 max="80"
@@ -1231,13 +1382,13 @@ function GoalsSetup({
         </div>
       </div>
 
-      <div className="mt-9 flex flex-wrap items-center gap-3">
-        <button onClick={onNext} className="btn-primary !px-8 !py-3 text-sm">
+      <div className="mt-8 sm:mt-9 flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
+        <button onClick={onBack} className="btn-ghost !py-3 w-full sm:w-auto">
+          {t("Quay lại khám phá", "Back to discovery")}
+        </button>
+        <button onClick={onNext} className="btn-primary !px-8 !py-3 text-sm w-full sm:w-auto">
           {t("Tiếp tục: Phễu lọc chi tiết", "Continue: detailed funnel")}
           <ArrowRight className="h-4 w-4" />
-        </button>
-        <button onClick={onBack} className="btn-ghost !py-3">
-          {t("Quay lại khám phá", "Back to discovery")}
         </button>
       </div>
     </section>
@@ -1245,7 +1396,7 @@ function GoalsSetup({
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SCREEN 03 — FUNNEL (không chọn thị trường)
+   SCREEN 03 — FUNNEL
    ═══════════════════════════════════════════════════════════════════ */
 function Funnel({
   filters,
@@ -1276,42 +1427,42 @@ function Funnel({
     }));
   return (
     <section className="animate-fade-up">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="max-w-2xl">
           <p className="eyebrow">
             {t("03 · Phễu lọc cây thông 3 cấp — Deterministic Funnel", "03 · 3-stage deterministic funnel")}
           </p>
-          <h1 className="mt-4 text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1c1917] sm:text-5xl">
+          <h1 className="mt-3 sm:mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.12] tracking-tight text-[#1c1917]">
             {lang === "vi" ? (
               <>Thiết lập tiêu chuẩn <span className="text-[#b72727]">loại trừ rủi ro.</span></>
             ) : (
               <>Set the standard to <span className="text-[#b72727]">eliminate risk.</span></>
             )}
           </h1>
-          <p className="mt-4 text-[15px] leading-relaxed t-2">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-[15px] leading-relaxed t-2">
             {t(
               "Bộ lọc 3 cấp loại trừ dần cơ hội không phù hợp. Sàn TMĐT tự động quét full 6 sàn — chiến lược chọn ở Sidebar.",
               "The 3-stage filter eliminates unfit opportunities. All 6 marketplaces are auto-crawled — strategy is set in the Sidebar.",
             )}
           </p>
         </div>
-        <button className="btn-ghost" onClick={() => setFilters(initialFilters)}>
+        <button className="btn-ghost self-start sm:self-auto" onClick={() => setFilters(initialFilters)}>
           <RefreshCcw className="h-3.5 w-3.5" />
           {t("Đặt lại mặc định", "Reset defaults")}
         </button>
       </div>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-3">
+      <div className="mt-6 sm:mt-8 grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <FilterGroup number="01" title={t("Ngách & mùa vụ", "Niche & seasonality")} subtitle={t("Chỉ giữ lại những cơ hội bạn thực sự muốn xem xét.", "Keep only the opportunities you really want.")}>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
             <div className="flex items-center gap-1.5 font-bold text-emerald-700">
               <Zap className="h-3.5 w-3.5" />
-              {t("Auto crawl full 6 sàn TMĐT", "Auto-crawl all 5 marketplaces")}
+              {t("Auto crawl full 6 sàn TMĐT", "Auto-crawl all 6 marketplaces")}
             </div>
             <p className="mt-1 text-[11px] leading-tight text-emerald-800/80">
               {t(
-                "Tự động quét Amazon, TikTok Shop, Shopee, eBay, Etsy + 2,091 từ khóa CSV + kho phôi Printway.",
-                "Auto-scans Amazon, TikTok Shop, Shopee, eBay, Etsy + 2,091 CSV keywords + Printway blanks.",
+                "Tự động quét Amazon, TikTok Shop, Shopee, Lazada, eBay, Etsy + 2,091 từ khóa CSV + kho phôi Printway.",
+                "Auto-scans Amazon, TikTok Shop, Shopee, Lazada, eBay, Etsy + 2,091 CSV keywords + Printway blanks.",
               )}
             </p>
           </div>
@@ -1329,20 +1480,20 @@ function Funnel({
           />
           <div>
             <span className="field-label">{t("Ngành hàng", "Categories")}</span>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {categoryOptions.map(([value, label]) => (
+            <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+              {categoryOptions.map(([value, labelVi, labelEn]) => (
                 <TogglePill
                   key={value}
                   active={filters.categories.includes(value)}
                   onClick={() => toggle("categories", value)}
                 >
-                  {label}
+                  {t(labelVi, labelEn)}
                 </TogglePill>
               ))}
             </div>
           </div>
           <div>
-            <label className="field-label flex items-center justify-between">
+            <div className="field-label flex items-center justify-between">
               <span>{t("Lọc theo hãng / thương hiệu", "Filter by brand")}</span>
               {filters.targetBrand && (
                 <button
@@ -1353,8 +1504,9 @@ function Funnel({
                   {t("Xóa lọc hãng", "Clear brand")}
                 </button>
               )}
-            </label>
+            </div>
             <input
+              aria-label={t("Lọc theo hãng hoặc thương hiệu", "Filter by brand")}
               type="text"
               value={filters.targetBrand || ""}
               onChange={(e) => update("targetBrand", e.target.value)}
@@ -1386,7 +1538,7 @@ function Funnel({
             <NumberInput label={t("Giá bán tối đa", "Max price")} value={filters.priceMax} onChange={(value) => update("priceMax", value)} />
           </div>
           <NumberInput label={t("Giá vốn phôi tối đa", "Max blank cost")} value={filters.cogs} onChange={(value) => update("cogs", value)} />
-          <div className="rounded-xl border border-[#e7e5e4] bg-[#fafaf9] p-4 text-xs leading-5 t-2">
+          <div className="rounded-xl border border-[#e7e5e4] bg-[#fafaf9] p-3.5 sm:p-4 text-xs leading-5 t-2">
             <CircleDollarSign className="mr-2 inline h-4 w-4 text-[#b72727]" />
             {t(
               "Hệ thống sẽ tính giá bán đề xuất, lợi nhuận mỗi đơn vị và điểm cơ hội từ các ràng buộc này.",
@@ -1419,14 +1571,14 @@ function Funnel({
           />
           <div>
             <span className="field-label">{t("Kỹ thuật sản xuất", "Craft techniques")}</span>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {techniqueOptions.map(([value, label]) => (
+            <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+              {techniqueOptions.map(([value, labelVi, labelEn]) => (
                 <TogglePill
                   key={value}
                   active={filters.techniques.includes(value)}
                   onClick={() => toggle("techniques", value)}
                 >
-                  {label}
+                  {t(labelVi, labelEn)}
                 </TogglePill>
               ))}
             </div>
@@ -1443,19 +1595,19 @@ function Funnel({
         </FilterGroup>
       </div>
 
-      <div className="card mt-8 flex flex-col items-start justify-between gap-5 border-l-4 !border-l-[#b72727] p-6 sm:flex-row sm:items-center animate-fade-up d-4">
+      <div className="card mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 !border-l-[#b72727] p-5 sm:p-6 animate-fade-up d-4">
         <div>
           <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#b72727]">
             {t("Sẵn sàng khi bạn sẵn sàng", "Ready when you are")}
           </p>
-          <p className="mt-1.5 text-xl font-extrabold tracking-tight text-[#1c1917]">
+          <p className="mt-1 text-lg sm:text-xl font-extrabold tracking-tight text-[#1c1917]">
             {t(
               "Quét tín hiệu thị trường với danh mục phôi xưởng.",
               "Scan market signals against the blank catalog.",
             )}
           </p>
         </div>
-        <button onClick={onAnalyze} disabled={loading} className="btn-primary !px-9 !py-3.5 text-sm">
+        <button onClick={onAnalyze} disabled={loading} className="btn-primary !px-7 sm:!px-9 !py-3.5 text-sm w-full sm:w-auto">
           {loading ? (
             <>
               <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1471,7 +1623,7 @@ function Funnel({
       </div>
       {error && (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#b72727]">
-          <ShieldCheck className="h-4 w-4" />
+          <ShieldCheck className="h-4 w-4 shrink-0" />
           {error}
         </p>
       )}
@@ -1516,10 +1668,12 @@ function Select({
   onChange: (value: string) => void;
   options: string[][];
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="field-label">{label}</label>
+      <label htmlFor={id} className="field-label">{label}</label>
       <select
+        id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="select mt-1.5"
@@ -1549,17 +1703,20 @@ function Range({
   suffix: string;
   onChange: (value: number) => void;
 }) {
+  const id = useId();
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <div>
       <div className="flex items-center justify-between">
-        <label className="field-label">{label}</label>
+        <label htmlFor={id} className="field-label">{label}</label>
         <strong className="font-mono text-[13px] text-[#b72727]">
           {value}
           {suffix}
         </strong>
       </div>
       <input
+        id={id}
+        aria-valuetext={`${value}${suffix}`}
         className="range mt-3"
         type="range"
         min={min}
@@ -1584,12 +1741,14 @@ function NumberInput({
   value: number;
   onChange: (value: number) => void;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="field-label">{label}</label>
+      <label htmlFor={id} className="field-label">{label}</label>
       <div className="relative mt-1.5">
         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[#a8a29e]">$</span>
         <input
+          id={id}
           className="input !pl-7"
           type="number"
           value={value}
@@ -1611,7 +1770,7 @@ function TogglePill({
   children: React.ReactNode;
 }) {
   return (
-    <button onClick={onClick} className={cn("chip", active && "chip-active")}>
+    <button type="button" onClick={onClick} aria-pressed={active} className={cn("chip", active && "chip-active")}>
       {active && <Check className="h-3 w-3" />}
       {children}
     </button>
@@ -1623,8 +1782,6 @@ function TogglePill({
    ═══════════════════════════════════════════════════════════════════ */
 function Results({
   analysis,
-  filters,
-  setFilters,
   loading,
   error,
   onAnalyze,
@@ -1632,8 +1789,6 @@ function Results({
   onRestart,
 }: {
   analysis: AnalysisResult | null;
-  filters: typeof initialFilters;
-  setFilters: React.Dispatch<React.SetStateAction<typeof initialFilters>>;
   loading: boolean;
   error: string;
   onAnalyze: () => void;
@@ -1679,34 +1834,44 @@ function Results({
 
   return (
     <section className="animate-fade-up">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="max-w-2xl">
           <p className="eyebrow">{t("04 · Bảng xếp hạng cơ hội vàng", "04 · Golden opportunity leaderboard")}</p>
-          <h1 className="mt-4 text-4xl font-extrabold leading-[1.08] tracking-tight text-[#1c1917] sm:text-5xl">
+          <h1 className="mt-3 sm:mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.12] tracking-tight text-[#1c1917]">
             {lang === "vi" ? (
               <>Danh sách cơ hội <span className="text-[#b72727]">chiến thắng</span> đã sẵn sàng.</>
             ) : (
               <>The list of <span className="text-[#b72727]">winning</span> opportunities is ready.</>
             )}
           </h1>
-          <p className="mt-4 text-[15px] leading-relaxed t-2">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-[15px] leading-relaxed t-2">
             {t(
               "Xếp hạng tự động bởi MCDA 6 trụ cột — auto crawl full 6 sàn + 2,091 tín hiệu thị trường.",
               "Ranked automatically by the 6-pillar MCDA — full auto-crawl of 6 marketplaces + 2,091 signals.",
             )}
           </p>
         </div>
-        <div className="flex gap-2.5">
-          <button className="btn-ghost" onClick={onRestart}>
+        <div className="flex flex-wrap gap-2 sm:gap-2.5">
+          <button className="btn-ghost !text-xs sm:!text-sm" onClick={onRestart}>
             <Search className="h-3.5 w-3.5" />
             {t("Tìm kiếm mới", "New search")}
           </button>
-          <button className="btn-primary !px-5 !py-2.5 !text-xs" onClick={onAnalyze} disabled={loading}>
+          <button className="btn-primary !px-4 sm:!px-5 !py-2.5 !text-xs" onClick={onAnalyze} disabled={loading}>
             {loading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
             {t("Làm mới kết quả", "Refresh results")}
           </button>
         </div>
       </div>
+
+      {error && analysis && (
+        <div role="alert" className="mt-5 flex flex-col gap-3 rounded-xl border border-[#f3d6d6] bg-[#fdf3f3] px-4 py-3 text-sm text-[#b72727] sm:flex-row sm:items-center sm:justify-between">
+          <span>{error}</span>
+          <button onClick={onAnalyze} disabled={loading} className="btn-ghost !border-[#f3d6d6] !bg-white !text-xs">
+            <RefreshCcw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+            {t("Thử làm mới lại", "Retry refresh")}
+          </button>
+        </div>
+      )}
 
       {loading && !analysis && (
         <div className="mt-8 space-y-4">
@@ -1719,7 +1884,7 @@ function Results({
                 </div>
                 <div className="skeleton h-16 w-16 rounded-full" />
               </div>
-              <div className="mt-4 grid grid-cols-6 gap-2">
+              <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {[0, 1, 2, 3, 4, 5].map((j) => (
                   <div key={j} className="skeleton h-12" />
                 ))}
@@ -1738,48 +1903,49 @@ function Results({
 
       {analysis && (
         <>
-          <div className="mt-7 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 sm:mt-7 grid gap-3 sm:gap-3.5 grid-cols-2 lg:grid-cols-4">
             <Kpi
               icon={Target}
-              label={t("Cơ hội đủ điều kiện", "Qualified opportunities")}
+              label={t("Cơ hội đủ điều kiện", "Qualified")}
               value={String(analysis.total_opportunities)}
-              note={t("sau khi qua bộ lọc ràng buộc", "after constraint filters")}
+              note={t("sau khi qua bộ lọc", "after filters")}
               delay={1}
             />
             <Kpi
               icon={TrendingUp}
-              label={t("Điểm cơ hội cao nhất", "Top opportunity score")}
+              label={t("Điểm cao nhất", "Top score")}
               value={Math.max(...analysis.opportunities.map((item) => item.opportunity_score), 0).toFixed(1)}
               note={t("trên thang điểm 100", "out of 100")}
               delay={2}
             />
             <Kpi
               icon={CircleDollarSign}
-              label={t("Biên lãi gộp trung bình", "Average gross margin")}
+              label={t("Biên lãi trung bình", "Avg margin")}
               value={`${averageMargin.toFixed(1)}%`}
-              note={t("trên toàn bộ danh sách", "across the list")}
+              note={t("toàn bộ danh sách", "across all items")}
               delay={3}
             />
             <Kpi
               icon={Zap}
-              label={t("Thời gian tính toán", "Computation time")}
+              label={t("Thời gian tính toán", "Compute time")}
               value={`${analysis.execution_time_ms}ms`}
-              note={t("auto crawl full + 6 trụ cột", "full auto-crawl + 6 pillars")}
+              note={t("auto crawl + 6 trụ cột", "crawl + 6 pillars")}
               delay={4}
             />
           </div>
 
           {/* Platform tabs + view mode + sort */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {PLATFORM_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setPlatform(tab.id)}
-                  className={cn("chip", platform === tab.id && "chip-active")}
+                  aria-pressed={platform === tab.id}
+                  className={cn("chip !px-2.5 !py-1.5 !text-xs", platform === tab.id && "chip-active")}
                 >
                   {t(tab.label, tab.en)}
-                  <span className="font-mono text-[10px] opacity-70">
+                  <span className="font-mono text-[10px] opacity-70 ml-1">
                     {tab.id === "all"
                       ? analysis.opportunities.length
                       : analysis.opportunities.filter((o) =>
@@ -1790,46 +1956,52 @@ function Results({
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Sort */}
               <div className="seg !p-0.5">
                 {(
                   [
-                    ["score", t("Điểm cao nhất", "Top score")],
-                    ["margin", t("Lãi dày nhất", "Top margin")],
-                    ["growth", t("Tăng nhanh nhất", "Top growth")],
+                    ["score", t("Điểm", "Score")],
+                    ["margin", t("Lãi", "Margin")],
+                    ["growth", t("Trend", "Trend")],
                   ] as const
                 ).map(([id, label]) => (
                   <button
                     key={id}
                     onClick={() => setSort(id)}
-                    className={cn("seg-btn !px-3 !py-1.5 !text-[11px]", sort === id && "seg-btn-active")}
+                    aria-pressed={sort === id}
+                    className={cn("seg-btn !px-2.5 sm:!px-3 !py-1 !text-[11px]", sort === id && "seg-btn-active")}
                   >
                     {label}
                   </button>
                 ))}
               </div>
               {/* Quick filters */}
-              <button onClick={() => setIpOnly(!ipOnly)} className={cn("chip", ipOnly && "chip-active")}>
+              <button onClick={() => setIpOnly(!ipOnly)} aria-pressed={ipOnly} className={cn("chip !px-2.5 !py-1.5 !text-xs", ipOnly && "chip-active")}>
                 <ShieldCheck className="h-3.5 w-3.5" />
-                {t("Clean IP", "Clean IP")}
+                <span className="hidden sm:inline">{t("Clean IP", "Clean IP")}</span>
+                <span className="sm:hidden">IP</span>
               </button>
-              <button onClick={() => setMarginOnly(!marginOnly)} className={cn("chip", marginOnly && "chip-active")}>
+              <button onClick={() => setMarginOnly(!marginOnly)} aria-pressed={marginOnly} className={cn("chip !px-2.5 !py-1.5 !text-xs", marginOnly && "chip-active")}>
                 <CircleDollarSign className="h-3.5 w-3.5" />
-                {t("Lãi > 70%", "Margin > 70%")}
+                <span>&gt; 70%</span>
               </button>
               {/* View mode */}
               <div className="seg !p-0.5">
                 <button
                   onClick={() => setViewMode("card")}
-                  className={cn("seg-btn !px-3 !py-1.5", viewMode === "card" && "seg-btn-active")}
+                  aria-pressed={viewMode === "card"}
+                  aria-label={t("Xem dạng thẻ", "Card view")}
+                  className={cn("seg-btn !px-2.5 !py-1", viewMode === "card" && "seg-btn-active")}
                   title={t("Xem dạng thẻ", "Card view")}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => setViewMode("table")}
-                  className={cn("seg-btn !px-3 !py-1.5", viewMode === "table" && "seg-btn-active")}
+                  aria-pressed={viewMode === "table"}
+                  aria-label={t("Xem dạng bảng chi tiết", "Detailed table view")}
+                  className={cn("seg-btn !px-2.5 !py-1", viewMode === "table" && "seg-btn-active")}
                   title={t("Xem dạng bảng chi tiết", "Detailed table view")}
                 >
                   <Table2 className="h-3.5 w-3.5" />
@@ -1881,6 +2053,21 @@ function Results({
           </button>
         </div>
       )}
+
+      {!analysis && !loading && !error && (
+        <div className="card mt-8 p-8 text-center sm:p-12">
+          <Search className="mx-auto h-8 w-8 text-[#b72727]" />
+          <h2 className="mt-3 text-lg font-extrabold text-[#1c1917]">
+            {t("Chưa có kết quả phân tích", "No analysis results yet")}
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-sm t-2">
+            {t("Bắt đầu từ màn hình Khám phá để chọn ngách và thiết lập bộ lọc.", "Start from Discover to choose a niche and configure your filters.")}
+          </p>
+          <button onClick={onRestart} className="btn-primary mt-5">
+            {t("Về màn hình Khám phá", "Go to Discover")}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
@@ -1899,17 +2086,17 @@ function Kpi({
   delay: number;
 }) {
   return (
-    <article className={cn("card card-hover p-5 animate-fade-up", `d-${delay}`)}>
-      <div className="flex items-center justify-between">
-        <span className="text-[11.5px] font-bold uppercase tracking-wider t-3">{label}</span>
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#fdf3f3] text-[#b72727]">
+    <article className={cn("card card-hover p-3.5 sm:p-5 animate-fade-up", `d-${delay}`)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10.5px] sm:text-[11.5px] font-bold uppercase tracking-wider t-3 truncate">{label}</span>
+        <span className="grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-xl bg-[#fdf3f3] text-[#b72727]">
           <Icon className="h-4 w-4" />
         </span>
       </div>
-      <strong className="mt-3 block font-mono text-[26px] font-bold tracking-tight text-[#1c1917]">
+      <div className="mt-2 sm:mt-3 font-mono text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1c1917]">
         {value}
-      </strong>
-      <small className="mt-0.5 block text-[11px] t-3">{note}</small>
+      </div>
+      <p className="mt-1 text-[10.5px] sm:text-[11px] t-3 truncate">{note}</p>
     </article>
   );
 }
@@ -2150,89 +2337,10 @@ function ScoringDetailPanel({
 }
 
 function PriceChartCard({ opportunity }: { opportunity: Opportunity }) {
-  const { t } = useI18n();
   return (
-    <div className="card p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#b72727]">
-            <BarChart3 className="h-3.5 w-3.5" />
-            {t("Biểu đồ giá thị trường & đệm lãi gộp (6 tháng)", "Market price & margin cushion (6 months)")}
-          </h4>
-          <p className="text-[10px] t-3">
-            {t("Giá bán lẻ đề xuất vs giá trung bình sàn & giá vốn phôi Printway", "Suggested retail vs marketplace avg & Printway blank cost")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-[10px] font-bold">
-          <span className="badge badge-red">{t("Đề xuất", "Suggested")}: {money(opportunity.suggested_price)}</span>
-          <span className="badge badge-gray">{t("Giá vốn", "COGS")}: {money(opportunity.base_cost)}</span>
-        </div>
-      </div>
-      <div className="h-48 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={opportunity.price_chart_data || []}>
-            <defs>
-              <linearGradient id={`colorPrice-${opportunity.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#b72727" stopOpacity={0.18} />
-                <stop offset="95%" stopColor="#b72727" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0efed" />
-            <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#78716c" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "#78716c" }} unit="$" axisLine={false} tickLine={false} width={46} />
-            <RechartsTooltip
-              formatter={(value) => [`$${Number(value).toFixed(2)}`, ""]}
-              labelStyle={{ color: "#57534e", fontWeight: 700, fontSize: 11 }}
-              contentStyle={{
-                background: "#ffffff",
-                border: "1px solid #e7e5e4",
-                borderRadius: 12,
-                fontSize: 11,
-              }}
-              itemStyle={{ color: "#1c1917" }}
-            />
-            <Area
-              type="monotone"
-              dataKey="suggested_price"
-              name={t("Giá bán đề xuất", "Suggested price")}
-              stroke="#b72727"
-              strokeWidth={2.5}
-              fillOpacity={1}
-              fill={`url(#colorPrice-${opportunity.id})`}
-              dot={{ r: 2.5, fill: "#b72727", strokeWidth: 0 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="market_avg"
-              name={t("Giá TB sàn đối thủ", "Competitor avg price")}
-              stroke="#d97706"
-              strokeWidth={1.6}
-              strokeDasharray="5 4"
-              dot={{ r: 2, fill: "#d97706", strokeWidth: 0 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="cogs"
-              name={t("Giá vốn phôi xưởng", "Blank cost")}
-              stroke="#7c3aed"
-              strokeWidth={1.6}
-              dot={{ r: 2, fill: "#7c3aed", strokeWidth: 0 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="mt-2.5 flex items-center justify-between border-t border-[#f0efed] pt-2.5 text-[10px] t-3">
-        <span>
-          {t("Khoảng giá thị trường:", "Market price range:")}{" "}
-          <strong className="text-[#1c1917]">
-            ${opportunity.price_min?.toFixed(2) || "19.99"} – ${opportunity.price_max?.toFixed(2) || "39.99"}
-          </strong>
-        </span>
-        <span className="font-bold text-emerald-700">
-          {t("Lãi gộp dày:", "Thick gross profit:")} +{money(opportunity.profit_per_unit)}/sp ({opportunity.profit_margin_pct}%)
-        </span>
-      </div>
-    </div>
+    <Suspense fallback={<div className="card h-[260px] animate-pulse bg-[#f5f5f4]" aria-hidden="true" />}>
+      <LazyPriceChartCard opportunity={opportunity} />
+    </Suspense>
   );
 }
 
@@ -2417,18 +2525,15 @@ function ResultsTable({
                     </td>
                     <td className="max-w-[320px] px-4 py-3.5">
                       <div className="flex items-center gap-3">
-                        {((opp as any).image_url || (opp as any).img_url || (opp as any).thumbnail) && (
-                          <img
-                            src={(opp as any).image_url || (opp as any).img_url || (opp as any).thumbnail}
-                            alt={opp.name}
-                            className="h-10 w-10 shrink-0 rounded-lg border border-[#e7e5e4] object-cover"
-                            loading="lazy"
-                          />
-                        )}
+                        <ProductThumbnail
+                          opportunity={opp}
+                          className="h-10 w-10 shrink-0 rounded-lg border border-[#e7e5e4] object-cover"
+                          fallbackClassName="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#fdf3f3] font-mono text-[11px] font-bold text-[#b72727]"
+                        />
                         <div className="min-w-0 flex-1">
                           <strong className="block truncate text-[13.5px] font-bold text-[#1c1917]">{opp.name}</strong>
                           <span className="block truncate text-[11px] t-3">{opp.target_niche}</span>
-                          <span className="badge badge-red mt-1 !text-[9.5px]">{categoryName(opp.category)}</span>
+                          <span className="badge badge-red mt-1 !text-[9.5px]">{categoryName(opp.category, lang)}</span>
                         </div>
                       </div>
                     </td>
@@ -2467,9 +2572,18 @@ function ResultsTable({
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <ChevronDown
-                        className={cn("h-4 w-4 text-[#a8a29e] transition-transform", isOpen && "rotate-180")}
-                      />
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-label={isOpen ? t("Thu gọn chi tiết", "Collapse details") : t("Mở rộng chi tiết", "Expand details")}
+                        className="grid h-8 w-8 place-items-center rounded-lg hover:bg-[#f0efed]"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setExpanded(isOpen ? null : opp.id);
+                        }}
+                      >
+                        <ChevronDown className={cn("h-4 w-4 text-[#a8a29e] transition-transform", isOpen && "rotate-180")} />
+                      </button>
                     </td>
                   </tr>
 
@@ -2524,12 +2638,46 @@ function ResultsTable({
 /* ═══════════════════════════════════════════════════════════════════
    OPPORTUNITY CARD (mode Card)
    ═══════════════════════════════════════════════════════════════════ */
+function ProductThumbnail({
+  opportunity,
+  className,
+  fallbackClassName,
+}: {
+  opportunity: Opportunity;
+  className: string;
+  fallbackClassName: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [opportunity.image_url]);
+
+  if (!opportunity.image_url || failed) {
+    return (
+      <span className={fallbackClassName} aria-label={opportunity.name}>
+        {Math.round(opportunity.opportunity_score)}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={opportunity.image_url}
+      alt={opportunity.name}
+      className={className}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function ScoreRing({ score, size = 74 }: { score: number; size?: number }) {
   const [progress, setProgress] = useState(0);
+  const safeScore = Math.min(100, Math.max(0, Number.isFinite(score) ? score : 0));
   useEffect(() => {
-    const timer = window.setTimeout(() => setProgress(score), 60);
+    const timer = window.setTimeout(() => setProgress(safeScore), 60);
     return () => window.clearTimeout(timer);
-  }, [score]);
+  }, [safeScore]);
   const radius = (size - 10) / 2;
   const circumference = 2 * Math.PI * radius;
   return (
@@ -2558,7 +2706,7 @@ function ScoreRing({ score, size = 74 }: { score: number; size?: number }) {
       </svg>
       <div className="absolute inset-0 grid place-items-center">
         <span className="font-mono font-bold text-[#1c1917]" style={{ fontSize: size * 0.26 }}>
-          {score}
+          {safeScore}
         </span>
       </div>
     </div>
@@ -2584,27 +2732,24 @@ function OpportunityCard({
   return (
     <article className="card card-hover overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-4">
+      <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
           <span
             className={cn(
-              "grid h-11 w-11 shrink-0 place-items-center rounded-xl font-mono text-sm font-bold",
+              "grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl font-mono text-xs sm:text-sm font-bold",
               rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-n",
             )}
           >
             {rank === 1 ? <Crown className="h-4 w-4" /> : `#${rank}`}
           </span>
-          {((opportunity as any).image_url || (opportunity as any).img_url || (opportunity as any).thumbnail) && (
-            <img
-              src={(opportunity as any).image_url || (opportunity as any).img_url || (opportunity as any).thumbnail}
-              alt={opportunity.name}
-              className="h-14 w-14 shrink-0 rounded-xl border border-[#e7e5e4] object-cover shadow-sm transition hover:scale-105"
-              loading="lazy"
-            />
-          )}
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="badge badge-red">{categoryName(opportunity.category)}</span>
+          <ProductThumbnail
+            opportunity={opportunity}
+            className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl border border-[#e7e5e4] object-cover shadow-sm transition hover:scale-105"
+            fallbackClassName="grid h-12 w-12 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-xl bg-[#fdf3f3] font-mono text-xs font-bold text-[#b72727]"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+              <span className="badge badge-red">{categoryName(opportunity.category, lang)}</span>
               {opportunity.brand_reference && (
                 <span className="badge badge-violet">🏷 {opportunity.brand_reference}</span>
               )}
@@ -2615,28 +2760,30 @@ function OpportunityCard({
                 {isCleanIp ? t("Sạch bản quyền", "Clean IP") : t("Cần duyệt bản quyền", "IP review needed")}
               </span>
             </div>
-            <h2 className="mt-1.5 text-lg font-extrabold tracking-tight text-[#1c1917] sm:text-xl">
+            <h2 className="mt-1.5 text-base sm:text-lg lg:text-xl font-extrabold tracking-tight text-[#1c1917]">
               {opportunity.name}
             </h2>
-            <p className="text-xs t-3">{opportunity.target_niche}</p>
+            <p className="text-xs t-3 truncate">{opportunity.target_niche}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 self-start lg:self-center">
-          <ScoreRing score={opportunity.opportunity_score} />
-          <div>
-            <span className="block text-[10px] font-extrabold uppercase tracking-[0.14em] t-3">
-              Opportunity<br />Score
-            </span>
-            <span className="mt-0.5 inline-block rounded-lg border border-[#f3d6d6] bg-[#fdf3f3] px-2.5 py-1 font-mono text-[11px] font-bold text-[#b72727]">
-              /100
-            </span>
+        <div className="flex items-center justify-between sm:justify-start gap-3 border-t sm:border-0 border-[#f0efed] pt-3 sm:pt-0 lg:self-center">
+          <div className="flex items-center gap-3">
+            <ScoreRing score={opportunity.opportunity_score} size={64} />
+            <div>
+              <span className="block text-[10px] font-extrabold uppercase tracking-[0.14em] t-3">
+                Opportunity<br />Score
+              </span>
+              <span className="mt-0.5 inline-block rounded-lg border border-[#f3d6d6] bg-[#fdf3f3] px-2 py-0.5 font-mono text-[11px] font-bold text-[#b72727]">
+                /100
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Body */}
-      <div className="grid gap-5 border-t border-[#f0efed] p-5 lg:grid-cols-[1.35fr_0.9fr]">
+      <div className="grid gap-5 border-t border-[#f0efed] p-4 sm:p-5 lg:grid-cols-[1.35fr_0.9fr]">
         <div>
           <PillarsInteractive opportunity={opportunity} />
         </div>
@@ -2645,7 +2792,7 @@ function OpportunityCard({
 
       {/* Expandable: chart + scoring detail PW1 */}
       {showAnalysis && (
-        <div className="border-t border-[#f0efed] bg-[#fafaf9] p-5 animate-fade-up">
+        <div className="border-t border-[#f0efed] bg-[#fafaf9] p-4 sm:p-5 animate-fade-up">
           <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
             <PriceChartCard opportunity={opportunity} />
             <ScoringDetailPanel opportunity={opportunity} preset="VIRAL_TREND" />
@@ -2654,21 +2801,21 @@ function OpportunityCard({
       )}
 
       {/* Footer */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f0efed] bg-[#fafaf9] px-5 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[#f0efed] bg-[#fafaf9] px-4 sm:px-5 py-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <span className="flex items-center gap-1.5 text-xs t-2">
             <Flame className="h-3.5 w-3.5 text-[#b72727]" />
             {opportunity.trend_velocity}
           </span>
-          <button onClick={() => setShowAnalysis(!showAnalysis)} className="btn-soft">
+          <button onClick={() => setShowAnalysis(!showAnalysis)} aria-expanded={showAnalysis} className="btn-soft !py-1.5 !text-xs">
             {showAnalysis ? <ChevronUp className="h-3.5 w-3.5" /> : <BarChart3 className="h-3.5 w-3.5" />}
             {showAnalysis
-              ? t("Ẩn chấm điểm chi tiết", "Hide detailed scoring")
-              : t("Xem chấm điểm chi tiết PW1", "View detailed PW1 scoring")}
+              ? t("Ẩn chi tiết", "Hide scoring")
+              : t("Chi tiết PW1", "PW1 scoring")}
           </button>
         </div>
-        <button onClick={onOpen} className="btn-primary !rounded-full !px-5 !py-2 !text-xs">
-          {t("Xem chi tiết & chiến lược marketing", "View details & marketing strategy")}
+        <button onClick={onOpen} className="btn-primary !rounded-full !px-5 !py-2 !text-xs w-full sm:w-auto">
+          {t("Xem chi tiết & marketing brief", "View details & marketing brief")}
           <ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -2697,24 +2844,32 @@ function BriefModal({
   opportunity: Opportunity;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
-  const radarData = [
-    { subject: t("Nhu Cầu", "Demand"), value: opportunity.score_breakdown.demand_growth },
-    { subject: t("Khoảng Trống", "Gap"), value: opportunity.score_breakdown.market_gap },
-    { subject: t("Biên Lãi", "Margin"), value: opportunity.score_breakdown.profit_margin },
-    { subject: t("Chuỗi Cung", "Supply"), value: opportunity.score_breakdown.supply_feasibility },
-    { subject: t("Bản Quyền", "IP"), value: opportunity.score_breakdown.ip_safety },
-    { subject: t("Viral TikTok", "TikTok"), value: opportunity.score_breakdown.tiktok_virality },
-  ];
+  const { t, lang } = useI18n();
+  const titleId = useId();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+    return () => previouslyFocused?.focus();
+  }, []);
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Product details">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div className="modal-panel">
-        <div className="flex items-start justify-between gap-4 border-b border-[#e7e5e4] bg-white px-6 py-5 sm:px-8">
-          <div>
+        <div className="sticky top-0 z-20 flex items-start justify-between gap-3 sm:gap-4 border-b border-[#e7e5e4] bg-white px-5 sm:px-8 py-4 sm:py-5">
+          <div className="min-w-0 flex-1">
             <p className="eyebrow">{t("05 · Chi tiết sản phẩm & số liệu thị trường", "05 · Product details & market metrics")}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-extrabold tracking-tight text-[#1c1917] sm:text-3xl">
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h2 id={titleId} className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-[#1c1917]">
                 {opportunity.name}
               </h2>
               {opportunity.brand_reference && (
@@ -2726,35 +2881,31 @@ function BriefModal({
             </div>
           </div>
           <button
+            ref={closeButtonRef}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#e7e5e4] text-[#a8a29e] transition hover:border-[#b72727]/40 hover:text-[#b72727]"
             onClick={onClose}
+            aria-label={t("Đóng chi tiết sản phẩm", "Close product details")}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="bg-[#fafaf9] p-5 sm:p-7">
+        <div className="modal-body bg-[#fafaf9] p-4 sm:p-7">
           <div className="space-y-5">
             {/* Scoring detail PW1 */}
             <ScoringDetailPanel opportunity={opportunity} preset="VIRAL_TREND" />
 
             <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="space-y-5">
-                <div className="card flex items-center gap-4 p-4">
-                  {((opportunity as any).image_url || (opportunity as any).img_url || (opportunity as any).thumbnail) ? (
-                    <img
-                      src={(opportunity as any).image_url || (opportunity as any).img_url || (opportunity as any).thumbnail}
-                      alt={opportunity.name}
-                      className="h-20 w-20 shrink-0 rounded-2xl border border-[#e7e5e4] object-cover shadow-sm"
-                    />
-                  ) : (
-                    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#b72727] font-mono text-2xl font-bold text-white">
-                      {opportunity.opportunity_score}
-                    </span>
-                  )}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-red">{categoryName(opportunity.category)}</span>
+                <div className="card flex flex-col sm:flex-row sm:items-center gap-4 p-4">
+                  <ProductThumbnail
+                    opportunity={opportunity}
+                    className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 rounded-2xl border border-[#e7e5e4] object-cover shadow-sm"
+                    fallbackClassName="grid h-16 w-16 sm:h-20 sm:w-20 shrink-0 place-items-center rounded-2xl bg-[#b72727] font-mono text-xl sm:text-2xl font-bold text-white"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="badge badge-red">{categoryName(opportunity.category, lang)}</span>
                       <span className="rounded-lg bg-[#b72727] px-2 py-0.5 font-mono text-xs font-bold text-white">
                         {opportunity.opportunity_score}/100
                       </span>
@@ -2766,12 +2917,12 @@ function BriefModal({
                   </div>
                 </div>
 
-                <div className="card p-5">
+                <div className="card p-4 sm:p-5">
                   <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#b72727]">
                     <Quote className="h-3.5 w-3.5" />
                     {t("Đặc điểm sản phẩm & Điểm giải quyết", "Product features & solution")}
                   </h3>
-                  <p className="mt-2.5 text-sm font-medium leading-relaxed t-2">
+                  <p className="mt-2.5 text-xs sm:text-sm font-medium leading-relaxed t-2">
                     {opportunity.key_pain_point_solved}
                   </p>
                   {opportunity.negative_reviews_summary && opportunity.negative_reviews_summary.length > 0 && (
@@ -2792,7 +2943,7 @@ function BriefModal({
               </div>
 
               <div className="space-y-5">
-                <div className="card p-5">
+                <div className="card p-4 sm:p-5">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#1c1917]">
                     {t("Kinh tế đơn vị & điểm hòa vốn", "Unit economics & break-even")}
                   </h3>
@@ -2806,8 +2957,8 @@ function BriefModal({
                       [t("Điểm hòa vốn ($1,000 Ads)", "Break-even ($1,000 ads)"), `~${Math.ceil(1000 / (opportunity.profit_per_unit || 1))} ${t("sản phẩm", "units")}`],
                     ].map(([term, value]) => (
                       <div className="flex justify-between gap-3 py-2.5" key={term as string}>
-                        <dt className="t-3">{term}</dt>
-                        <dd className="text-right font-mono font-bold text-[#1c1917]">{value}</dd>
+                        <dt className="t-3 truncate">{term}</dt>
+                        <dd className="text-right font-mono font-bold text-[#1c1917] shrink-0">{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -2817,25 +2968,9 @@ function BriefModal({
                   <p className="text-[11px] font-extrabold uppercase tracking-wider t-3">
                     {t("Radar 6 trụ cột cơ hội", "6-pillar opportunity radar")}
                   </p>
-                  <div className="mt-2 h-60">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={radarData} outerRadius="74%">
-                        <PolarGrid stroke="#e7e5e4" />
-                        <PolarAngleAxis
-                          dataKey="subject"
-                          tick={{ fill: "#57534e", fontSize: 10.5, fontWeight: 700 }}
-                        />
-                        <RadarShape
-                          dataKey="value"
-                          stroke="#b72727"
-                          fill="#b72727"
-                          fillOpacity={0.22}
-                          strokeWidth={2}
-                          dot={{ r: 3, fill: "#b72727", strokeWidth: 0 }}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <Suspense fallback={<div className="mt-2 h-56 animate-pulse rounded-xl bg-[#f5f5f4] sm:h-60" aria-hidden="true" />}>
+                    <LazyOpportunityRadar opportunity={opportunity} />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -2844,12 +2979,12 @@ function BriefModal({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e7e5e4] bg-white px-6 py-4 sm:px-8">
-          <button onClick={() => window.print()} className="btn-ghost">
+        <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-between gap-3 border-t border-[#e7e5e4] bg-white px-5 sm:px-8 py-3.5 sm:py-4">
+          <button onClick={() => window.print()} className="btn-ghost !text-xs">
             <Download className="h-3.5 w-3.5" />
-            {t("Xuất file / In báo cáo PDF", "Export / Print PDF report")}
+            {t("Xuất file / In PDF", "Export / Print PDF")}
           </button>
-          <button onClick={onClose} className="text-xs font-bold t-3 transition hover:text-[#1c1917]">
+          <button onClick={onClose} className="btn-primary !px-5 !py-2 !text-xs">
             {t("Đóng", "Close")}
           </button>
         </div>
@@ -2857,4 +2992,3 @@ function BriefModal({
     </div>
   );
 }
-

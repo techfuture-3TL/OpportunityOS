@@ -16,13 +16,21 @@ const I18nContext = createContext<I18nContextValue>({
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
-    const stored = window.localStorage.getItem("opp-os-lang");
-    return stored === "en" ? "en" : "vi";
+    try {
+      const stored = window.localStorage.getItem("opp-os-lang");
+      return stored === "en" ? "en" : "vi";
+    } catch {
+      return "vi";
+    }
   });
 
   const setLang = (next: Lang) => {
     setLangState(next);
-    window.localStorage.setItem("opp-os-lang", next);
+    try {
+      window.localStorage.setItem("opp-os-lang", next);
+    } catch {
+      // Language switching should still work when storage is unavailable.
+    }
   };
 
   useEffect(() => {
