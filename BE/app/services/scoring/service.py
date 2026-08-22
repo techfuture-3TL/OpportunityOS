@@ -43,9 +43,9 @@ def _map_sku(title: str) -> tuple[str, float, float]:
 
     if any(k in t for k in ["giày", "giay", "sneaker", "shoes", "shoe", "boot"]):
         return ("PW-FOOT-SNEAKER-CUSTOM", 18.0, 49.99)
-    if "tumbler" in t:
+    if any(k in t for k in ["tumbler", "bình", "binh", "flask", "bottle"]):
         return ("PW-DRINK-TUMB-20OZ", 8.5, 24.99)
-    if "mug" in t or "cup" in t:
+    if any(k in t for k in ["mug", "cup", "cốc", "coc", "ly"]):
         return ("PW-DRINK-MUG-15OZ", 7.5, 22.99)
     if "hoodie" in t:
         return ("PW-APP-HOODIE-FLEECE", 14.0, 39.99)
@@ -97,7 +97,9 @@ def _generate_pillar_rationales(
     growth = sig.get("growth_rate", 0)
     qty = max(10, sig.get("quantity_sold", 0))
     price = sig.get("price", 0)
-    target_price = price if price > 0 else suggested_price
+    # Marketplace price is a competitor benchmark. The proposed POD retail
+    # price must still cover the matched Printway blank's catalog target.
+    target_price = max(float(price or 0), suggested_price)
     rev = sig.get("revenue", 0)
     if rev == 0:
         rev = round(target_price * qty, 2)
@@ -360,7 +362,7 @@ class ScoringService:
 
             # Calculate profit margin
             price = sig.get("price", 0)
-            target_price = price if price > 0 else suggested_price
+            target_price = max(float(price or 0), suggested_price)
             margin = ((target_price - base_cost) / target_price) * 100 if target_price > 0 else 60.0
 
             rationales, explanations, breakdown_details, pain_point, kws, fin = _generate_pillar_rationales(
@@ -455,7 +457,7 @@ class ScoringService:
         # 3. Profit Margin (0-100)
         price = sig.get("price", 0)
         sku, base_cost, suggested_price = _map_sku(sig.get("title", ""))
-        target_p = price if price > 0 else suggested_price
+        target_p = max(float(price or 0), suggested_price)
         margin = (target_p - base_cost) / target_p if target_p > 0 else 0.6
 
         if 0.4 <= margin <= 0.75:
@@ -471,7 +473,7 @@ class ScoringService:
         title = sig.get("title", "").lower()
         if any(k in title for k in ["custom", "personalized", "engraved", "monogram", "in theo yêu cầu"]):
             supply_feasibility = 95
-        elif any(k in title for k in ["tumbler", "mug", "shirt", "hoodie", "ornament", "giày", "sneaker", "light", "đèn"]):
+        elif any(k in title for k in ["tumbler", "mug", "bình", "binh", "cốc", "coc", "ly", "shirt", "hoodie", "ornament", "giày", "sneaker", "light", "đèn"]):
             supply_feasibility = 85
         else:
             supply_feasibility = 70

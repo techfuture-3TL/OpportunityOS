@@ -52,6 +52,21 @@ def _rule_based_relevance_check(query: str, title: str) -> bool:
     return len(overlap) > 0 or len(q_tokens) == 0
 
 
+def _ensure_source_coverage(
+    products: List[Dict[str, Any]],
+    filtered: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Keep the best available candidate from every crawled marketplace."""
+    result = list(filtered)
+    covered = {str(product.get("source", "")).lower() for product in result}
+    for product in products:
+        source = str(product.get("source", "")).lower()
+        if source and source not in covered:
+            result.append(product)
+            covered.add(source)
+    return result
+
+
 async def filter_and_classify_products_with_llm(
     query: str,
     products: List[Dict[str, Any]],
@@ -67,7 +82,7 @@ async def filter_and_classify_products_with_llm(
     # If no DeepSeek API key, use rule-based filter
     if not settings.DEEPSEEK_API_KEY:
         filtered = [p for p in products if _rule_based_relevance_check(query, p.get("title", ""))]
-        return filtered if filtered else products
+        return _ensure_source_coverage(products, filtered)
 
     # Prepare titles for LLM
     product_candidates = []
@@ -145,11 +160,11 @@ Return ONLY valid JSON matching this schema:
 
                 if filtered_products:
                     print(f"[classifier] LLM filtered {len(products)} -> {len(filtered_products)} relevant products for '{query}'")
-                    return filtered_products
+                    return _ensure_source_coverage(products, filtered_products)
 
     except Exception as e:
         print(f"[classifier] LLM classifier notice: {e}. Using rule-based filter.")
 
     # Rule-based fallback
     filtered = [p for p in products if _rule_based_relevance_check(query, p.get("title", ""))]
-    return filtered if filtered else products
+    return _ensure_source_coverage(products, filtered)

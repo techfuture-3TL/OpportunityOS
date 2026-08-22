@@ -12,6 +12,7 @@ from app.services.scoring.service import (
 def test_map_sku_catalog():
     """Verify SKU mapping for different product categories."""
     assert _map_sku("HydroJug Insulated Tumbler")[0] == "PW-DRINK-TUMB-20OZ"
+    assert _map_sku("Bình giữ nhiệt inox 40oz")[0] == "PW-DRINK-TUMB-20OZ"
     assert _map_sku("Custom Nike Style Sneaker Shoes")[0] == "PW-FOOT-SNEAKER-CUSTOM"
     assert _map_sku("Christmas Acrylic LED Night Light")[0] == "PW-GIFT-ACRYLIC-LIGHT"
     assert _map_sku("Vintage Unisex Heavyweight T-Shirt")[0] == "PW-APP-TEE-HEAVY"
@@ -96,6 +97,24 @@ def test_scoring_service_end_to_end():
     for key in ["demand", "gap", "margin", "supply", "safety", "virality"]:
         assert key in opp.score_rationales
         assert len(opp.score_rationales[key]) > 50
+
+
+def test_competitor_price_does_not_undercut_printway_target():
+    """A low marketplace benchmark must not become an unprofitable POD retail target."""
+    opportunity = ScoringService().score([
+        {
+            "signal_id": "SIG-LAZADA-1",
+            "title": "Bình giữ nhiệt Lazada",
+            "price": 8.5,
+            "quantity_sold": 100,
+            "growth_rate": 40,
+            "source": "lazada",
+        }
+    ])[0]
+
+    assert opportunity.best_fit_sku == "PW-DRINK-TUMB-20OZ"
+    assert opportunity.suggested_price == 24.99
+    assert opportunity.profit_margin_pct >= 60
 
 
 if __name__ == "__main__":

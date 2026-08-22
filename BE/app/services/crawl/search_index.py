@@ -6,7 +6,6 @@ first-party marketplace measurements.
 """
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import base64
 import re
@@ -48,11 +47,6 @@ _HEADERS = {
     ),
     "accept-language": "en-US,en;q=0.9,vi;q=0.8",
 }
-
-# Public search indexes throttle bursts from serverless IPs. Only serialize the
-# short index lookup; marketplace crawlers and image fetches remain concurrent.
-_SEARCH_INDEX_SLOT = asyncio.Semaphore(1)
-
 
 def _unwrap_result_url(raw_url: str) -> str:
     if raw_url.startswith("//"):
@@ -181,23 +175,22 @@ async def fetch_indexed_marketplace_listings(
         search_queries.append(f'site:lazada.vn/products "{query}" Lazada')
 
     try:
-        async with _SEARCH_INDEX_SLOT:
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                for search_query in search_queries:
-                    duck_url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(search_query)
-                    bing_url = (
-                        "https://www.bing.com/search?cc=vn&setlang=vi&q="
-                        + urllib.parse.quote(search_query)
-                    )
-                    # Lazada's Vietnamese inventory is indexed more reliably by
-                    # localized Bing, with DuckDuckGo as the secondary index.
-                    index_urls = [bing_url, duck_url] if source == "lazada" else [duck_url, bing_url]
-                    for index_url in index_urls:
-                        response = await client.get(index_url, headers=_HEADERS)
-                        if response.status_code == 200:
-                            products = parse_indexed_results(response.text, source, query, limit)
-                            if products:
-                                return products
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            for search_query in search_queries:
+                duck_url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(search_query)
+                bing_url = (
+                    "https://www.bing.com/search?cc=vn&setlang=vi&q="
+                    + urllib.parse.quote(search_query)
+                )
+                # Lazada's Vietnamese inventory is indexed more reliably by
+                # localized Bing, with DuckDuckGo as the secondary index.
+                index_urls = [bing_url, duck_url] if source == "lazada" else [duck_url, bing_url]
+                for index_url in index_urls:
+                    response = await client.get(index_url, headers=_HEADERS)
+                    if response.status_code == 200:
+                        products = parse_indexed_results(response.text, source, query, limit)
+                        if products:
+                            return products
         return []
     except (httpx.HTTPError, ValueError):
         return []
