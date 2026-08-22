@@ -344,3 +344,16 @@ export const getMarketplaceStats = () =>
     .then(({ data }) => data)
 export const triggerCrawl = (query: string) => api.post<{ total_crawled: number; products: unknown[] }>(`/marketplace/crawl?query=${encodeURIComponent(query)}`).then(({ data }) => data)
 export const searchRag = (query: string) => api.post<{ total_matches: number; items: unknown[] }>(`/marketplace/rag?query=${encodeURIComponent(query)}`).then(({ data }) => data)
+
+export async function fetchRealtimeHotSearches(): Promise<any[]> {
+  try {
+    const res = await api.get("/hot-searches")
+    const data = unwrap<any[]>(res.data)
+    if (Array.isArray(data) && data.length > 0) {
+      return data
+    }
+  } catch (err) {
+    console.warn("API /hot-searches fallback to local PW data:", err)
+  }
+  return []
+}

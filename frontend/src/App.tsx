@@ -1,3 +1,16 @@
+export interface AnalysisHistoryItem {
+  id: string;
+  timestamp: number;
+  query: string;
+  targetBrand?: string;
+  totalCount: number;
+  topOpportunityTitle: string;
+  topScore: number;
+  topMargin: number;
+  topSku: string;
+  result: AnalysisResult;
+}
+
 import { PW_HOT_KEYWORDS, type HotKeywordItem } from "./data/pwKeywords";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
@@ -59,7 +72,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { analyzeOpportunities, checkHealth } from "./api";
+import { analyzeOpportunities, checkHealth, fetchRealtimeHotSearches } from "./api";
 import type { AnalysisResult, Opportunity, ScoringDetail, Strategy } from "./types";
 import { useI18n } from "./i18n";
 import { cn } from "./lib/utils";
@@ -931,6 +944,138 @@ function BriefModal({ opportunity, onClose }: { opportunity: Opportunity; onClos
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] bg-[var(--panel)] px-8 py-5">
           <button onClick={() => window.print()} className="btn-ghost"><Download className="h-4 w-4" />{t("Xuất file / In báo cáo PDF", "Export / Print PDF report")}</button>
           <button onClick={onClose} className="text-sm font-bold text-[var(--text-3)] transition hover:text-[var(--text-1)]">{t("Đóng", "Close")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   HISTORY MODAL COMPONENT
+   ═══════════════════════════════════════════════════════════════════════════════ */
+function HistoryModal({
+  history,
+  onSelect,
+  onRerun,
+  onDelete,
+  onClearAll,
+  onClose,
+}: {
+  history: AnalysisHistoryItem[];
+  onSelect: (item: AnalysisHistoryItem) => void;
+  onRerun: (query: string) => void;
+  onDelete: (id: string) => void;
+  onClearAll: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Analysis History">
+      <div className="modal-panel max-w-3xl">
+        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--panel)] px-8 py-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
+              <Database className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-xl font-extrabold text-[var(--text-1)]">
+                {t("Lịch sử phân tích cơ hội (A-Z)", "Analysis History & Research Logs")}
+              </h2>
+              <p className="text-xs text-[var(--text-3)]">
+                {t(`Đã lưu ${history.length} phiên tìm kiếm trước đó`, `Saved ${history.length} previous search sessions`)}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {history.length > 0 && (
+              <button
+                onClick={onClearAll}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent-soft)]"
+              >
+                {t("Xóa tất cả", "Clear all")}
+              </button>
+            )}
+            <button className="btn-icon" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="max-h-[65vh] overflow-y-auto p-6 lg:p-8">
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--panel-2)] text-[var(--text-3)]">
+                <Database className="h-8 w-8" />
+              </div>
+              <h3 className="mt-4 text-base font-bold text-[var(--text-1)]">
+                {t("Chưa có lịch sử phân tích nào", "No search history yet")}
+              </h3>
+              <p className="mt-1 text-xs text-[var(--text-3)]">
+                {t("Các lượt phân tích ngách và sản phẩm sẽ tự động được lưu lại tại đây.", "Your niche and product analyses will automatically be saved here.")}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {history.map((item) => (
+                <div
+                  key={item.id}
+                  className="card card-hover flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-base font-extrabold text-[var(--text-1)]">
+                        {item.query}
+                      </strong>
+                      {item.targetBrand && (
+                        <span className="badge badge-violet">🏷 {item.targetBrand}</span>
+                      )}
+                      <span className="badge badge-red font-mono font-bold">
+                        Top {item.topScore}/100
+                      </span>
+                    </div>
+                    <p className="mt-1.5 truncate text-xs text-[var(--text-2)]">
+                      {item.topOpportunityTitle} · <span className="font-mono text-[var(--emerald)]">+{item.topMargin}% margin</span> · SKU: <span className="font-mono">{item.topSku}</span>
+                    </p>
+                    <span className="mt-2 block text-[11px] text-[var(--text-3)]">
+                      🕒 {new Date(item.timestamp).toLocaleString("vi-VN")} · {item.totalCount} cơ hội tìm thấy
+                    </span>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => onSelect(item)}
+                      className="btn-primary !px-4 !py-2 !text-xs"
+                    >
+                      {t("Xem lại kết quả", "Reopen")}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onRerun(item.query)}
+                      className="btn-ghost !px-3 !py-2 !text-xs"
+                      title={t("Chạy lại với dữ liệu mới", "Rerun with live data")}
+                    >
+                      <RefreshCcw className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(item.id)}
+                      className="rounded-xl p-2 text-[var(--text-3)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
+                      title={t("Xóa", "Delete")}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end border-t border-[var(--border)] bg-[var(--panel)] px-8 py-4">
+          <button onClick={onClose} className="btn-ghost !px-5 !py-2 !text-xs">
+            {t("Đóng", "Close")}
+          </button>
         </div>
       </div>
     </div>
