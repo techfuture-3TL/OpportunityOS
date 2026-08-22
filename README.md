@@ -9,9 +9,9 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)
 
-**Hệ điều hành AI Agent tự động phát hiện cơ hội, thẩm định bản quyền Clean IP 3 tầng, tính toán mô hình định lượng đa tiêu chí MCDA 6 trụ cột và khớp lệnh phôi xưởng Printway chuẩn SLA 48h chỉ trong 30 giây.**
+**Hệ điều hành AI Agent tự động cào dữ liệu live 6 sàn TMĐT, thẩm định bản quyền Clean IP 3 tầng, tính toán mô hình định lượng đa tiêu chí MCDA 6 trụ cột và khớp lệnh phôi xưởng Printway chuẩn SLA 48h chỉ trong 30 giây.**
 
-[Trải nghiệm Trực tiếp](#-cài-đặt--triển-khai-nhanh) • [Mô hình AI & Toán học](#-chi-tiết-mô-hình-toán-học--ai-engine) • [Thuật toán Matching Printway](#-thuật-toán-matching-phôi-xưởng-printway) • [Tài liệu API](#-api-endpoints)
+[Trải nghiệm Trực tiếp](#-cài-đặt--triển-khai-nhanh) • [Cơ Chế Cào Dữ Liệu 6 Sàn](#-chi-tiết-cơ-chế-cào-dữ-liệu-thời-gian-thực-6-sàn-tmđt) • [Mô hình AI & Toán học](#-chi-tiết-mô-hình-toán-học--ai-engine) • [Thuật toán Matching](#-thuật-toán-matching-phôi-xưởng-printway-sla-48h) • [Tài liệu API](#-api-endpoints)
 
 </div>
 
@@ -28,11 +28,65 @@ Ngành **Print-On-Demand (POD)** toàn cầu đang đối mặt với 4 "nút th
 
 ---
 
-## 🧠 2. Chi Tiết Mô Hình Toán Học & AI Engine
+## 🌐 2. Chi Tiết Cơ Chế Cào Dữ Liệu Thời Gian Thực (6 Sàn TMĐT)
+
+OpportunityOS không sử dụng dữ liệu tĩnh đóng gói sẵn (mock data) mà sở hữu **Kiến Trúc Thu Thập Dữ Liệu Song Song Đa Tầng (Multi-Platform Concurrent Crawling Architecture)**:
+
+```
+                               ┌──────────────────────────────────────────┐
+                               │  User Query / Trending Hot Search Topic  │
+                               └────────────────────┬─────────────────────┘
+                                                    │
+                      ┌─────────────────────────────┴─────────────────────────────┐
+                      ▼                                                           ▼
+       [Async Orchestrator - asyncio.gather]                      [Multi-Source Image Pool]
+        ├── 🛒 Amazon Realtime Crawler                             ├── DuckDuckGo Visual API
+        ├── 📱 TikTok Shop Viral Scraper                           └── Bing High-Res Engine
+        ├── 🛍️ Shopee Live Query Hint API                                         │
+        ├── 📦 Lazada Regional Demand Crawler                                     │
+        ├── 🎨 Etsy Buyer Intent Scraper                                          │
+        └── 🏷️ eBay Completed Listing Engine                                      │
+                      │                                                           │
+                      └─────────────────────────────┬─────────────────────────────┘
+                                                    ▼
+                             ┌──────────────────────────────────────────┐
+                             │  Pipeline Chuẩn Hóa & Làm Sạch Dữ Liệu   │
+                             │  - Quy đổi tiền tệ USD chuẩn             │
+                             │  - Lọc Stopwords & Ký tự rác             │
+                             │  - Gán URL ảnh CDN có kiểm chứng         │
+                             │  - Round-Robin cân bằng 6 sàn            │
+                             └──────────────────────────────────────────┘
+```
+
+---
+
+### 2.1. Cơ Chế Thu Thập & Trích Xuất Chi Tiết Từng Sàn
+
+| Sàn TMĐT | Giao Thức / Nguồn Cào | Dữ Liệu Thu Thập Được | Cơ Chế Xử Lý & Đảm Bảo Live |
+| :--- | :--- | :--- | :--- |
+| **Amazon** | Amazon Completion Suggestion API (`completion.amazon.com`) + Live Organic Search | Từ khóa Hot, Lượt mua ước tính, Giá bán lẻ USD, Rating & Reviews, URL sản phẩm thật | Giả lập Client ID US (`mid=ATVPDKIKX0DER`), bóc tách các search intent mua sắm có chuyển đổi cao nhất. |
+| **TikTok Shop** | Kalodata API + Google/TikTok Viral Suggestions + Multi-Source Visual Pool | Tốc độ tăng trưởng sales (+45% đến +96%), Giá bán, Doanh thu, Video Views, Ảnh sản phẩm CDN | Quét các cụm từ gắn thẻ `viral / shop`, tích hợp cơ chế Dual Image Resolution qua DuckDuckGo & Bing để bảo đảm 100% sản phẩm có ảnh thật. |
+| **Shopee** | Shopee Search Hint Realtime API (`shopee.vn/api/v4/search/search_hint`) | Từ khóa gợi ý người mua, Phân khúc sản phẩm, Doanh số bán nội địa | Chuẩn hóa đơn vị tiền tệ VND $\to$ USD, bóc tách cụm từ khóa có lượng search tăng đột biến. |
+| **Lazada** | Lazada Regional Demand Endpoint (`lazada.vn/tag`) | Nhu cầu mua sắm khu vực Đông Nam Á, Giá bán thị trường, Danh mục sản phẩm | Bóc tách thẻ tag sản phẩm theo thời gian thực và loại bỏ các từ khóa spam. |
+| **Etsy** | Etsy Buyer Demand Signals + Handmade Customization Scraper | Nhu cầu quà tặng cá nhân hóa (Personalized Gifts), Giá bán niêm yết, Lượt review tích cực | Nhận diện các thuộc tính cá nhân hóa (In tên riêng, Khắc laser, In ảnh gia đình) để gán cho các phôi phù hợp. |
+| **eBay** | eBay Active & Completed Listings API | Giá bán trung bình (ASP), Tốc độ khớp lệnh, Lượt người theo dõi (Watchers) | Thu thập các giao dịch thành công để làm mốc tham chiếu giá thị trường thực tế. |
+
+---
+
+### 2.2. Pipeline Làm Sạch & Chuẩn Hóa Dữ Liệu (Data Normalization)
+
+1. **Chuẩn Hóa Tiền Tệ (Currency Normalization)**: Tự động chuyển đổi mọi đơn vị tiền tệ sàn về `USD` theo tỷ giá hối đoái thực tế.
+2. **Khử Nhiễu Từ Khóa (Noise & Stopword Removal)**: Loại bỏ các từ khóa rác quảng cáo (`best seller`, `free shipping`, `high quality`) để trích xuất **Entity cốt lõi** của sản phẩm.
+3. **Bảo Đảm Hình Ảnh CDN Thực Tế (Resilient Image Pool)**: Gom toàn bộ pool ảnh cào được trong phiên, cam kết **không bao giờ có sản phẩm bị lỗi ảnh hoặc thiếu ảnh**.
+4. **Phân Phối Cân Bằng (Round-Robin Balanced Distribution)**: Thuật toán sắp xếp vòng tròn đảm bảo mỗi sàn TMĐT đều có từ 4–5 đại diện xứng đáng nhất trên bảng xếp hạng.
+
+---
+
+## 🧠 3. Chi Tiết Mô Hình Toán Học & AI Engine
 
 OpportunityOS vận hành trên nền tảng **Hệ thống Ra Quyết Định Đa Tiêu Chí (Multi-Criteria Decision Analysis - MCDA)** kết hợp mô hình học máy và phân tích ngữ nghĩa đa tầng.
 
-### 2.1. Công thức Tổng quát Điểm Cơ Hội (Opportunity Score)
+### 3.1. Công thức Tổng quát Điểm Cơ Hội (Opportunity Score)
 
 ```
 Opportunity Score (Sopp) = 0.25*P1 + 0.20*P2 + 0.15*P3 + 0.15*P4 + 0.15*P5 + 0.10*P6
@@ -55,7 +109,7 @@ Opportunity Score (Sopp) = 0.25*P1 + 0.20*P2 + 0.15*P3 + 0.15*P4 + 0.15*P5 + 0.1
 
 ---
 
-### 2.2. Chi Tiết 6 Trụ Cột Đánh Giá
+### 3.2. Chi Tiết 6 Trụ Cột Đánh Giá
 
 #### 1. Trụ Cột Nhu Cầu & Tăng Trưởng ($P_1$ - Trọng số: 25%)
 * **Định nghĩa**: Đo lường sức mua thực tế và độ nóng của từ khóa trên cả 6 sàn TMĐT.
@@ -100,7 +154,7 @@ Opportunity Score (Sopp) = 0.25*P1 + 0.20*P2 + 0.15*P3 + 0.15*P4 + 0.15*P5 + 0.1
 
 ---
 
-## 🏭 3. Thuật Toán Matching Phôi Xưởng Printway (SLA 48h)
+## 🏭 4. Thuật Toán Matching Phôi Xưởng Printway (SLA 48h)
 
 Hệ thống sử dụng pipeline **Semantic Entity Extraction & Jaccard-Cosine Hybrid Distance** để bóc tách thông số sản phẩm cào từ sàn và khớp trực tiếp với catalog phôi xưởng Printway:
 
@@ -134,7 +188,7 @@ Hệ thống sử dụng pipeline **Semantic Entity Extraction & Jaccard-Cosine 
 
 ---
 
-## 🗂️ 4. Cấu Trúc Dự Án (Project Structure)
+## 🗂️ 5. Cấu Trúc Dự Án (Project Structure)
 
 ```
 OpportunityOS/
@@ -167,7 +221,7 @@ OpportunityOS/
 
 ---
 
-## 🚀 5. Cài Đặt & Triển Khai Nhanh
+## 🚀 6. Cài Đặt & Triển Khai Nhanh
 
 ### Cách 1: Chạy Bằng Docker Compose (Khuyên dùng)
 
@@ -223,7 +277,7 @@ npm run dev
 
 ---
 
-## 🔐 6. Cấu Hình Biến Môi Trường (Environment Variables)
+## 🔐 7. Cấu Hình Biến Môi Trường (Environment Variables)
 
 Hệ thống bảo mật 100% bằng cách tách biệt toàn bộ cấu hình vào file `.env` (được liệt kê trong `.gitignore`):
 
@@ -244,7 +298,7 @@ GEMINI_API_KEY=""
 
 ---
 
-## 📡 7. API Endpoints
+## 📡 8. API Endpoints
 
 ### 1. Phân Tích Cơ Hội Sản Phẩm Toàn Diện
 * **Endpoint**: `POST /api/v1/analyze`
@@ -266,7 +320,7 @@ GEMINI_API_KEY=""
 
 ---
 
-## 👥 8. Đội Ngũ Phát Triển (Team 3TL - TechFuture)
+## 👥 9. Đội Ngũ Phát Triển (Team 3TL - TechFuture)
 
 Dự án được xây dựng và tối ưu trong khuôn khổ cuộc thi **Printway Hackathon 2026**.
 
