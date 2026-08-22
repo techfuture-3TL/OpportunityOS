@@ -9,9 +9,9 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)
 
-**Hệ điều hành AI Agent tự động phát hiện, thẩm định bản quyền, chấm điểm đa tiêu chí (MCDA) và khớp lệnh phôi xưởng Printway chỉ trong 30 giây.**
+**Hệ điều hành AI Agent tự động phát hiện cơ hội, thẩm định bản quyền Clean IP 3 tầng, tính toán mô hình định lượng đa tiêu chí MCDA 6 trụ cột và khớp lệnh phôi xưởng Printway chuẩn SLA 48h chỉ trong 30 giây.**
 
-[Trải nghiệm Trực tiếp](#-cài-đặt--triển-khai-nhanh) • [Kiến trúc Hệ thống](#-kiến-trúc-hệ-thống) • [Thuật toán Matching](#-thuật-toán-matching-phôi-xưởng-printway) • [Tài liệu API](#-api-endpoints)
+[Trải nghiệm Trực tiếp](#-cài-đặt--triển-khai-nhanh) • [Mô hình AI & Toán học](#-chi-tiết-mô-hình-toán-học--ai-engine) • [Thuật toán Matching Printway](#-thuật-toán-matching-phôi-xưởng-printway) • [Tài liệu API](#-api-endpoints)
 
 </div>
 
@@ -28,47 +28,98 @@ Ngành **Print-On-Demand (POD)** toàn cầu đang đối mặt với 4 "nút th
 
 ---
 
-## 💡 2. Giải Pháp OpportunityOS (Solution)
+## 🧠 2. Chi Tiết Mô Hình Toán Học & AI Engine
 
-**OpportunityOS** biến toàn bộ quy trình nghiên cứu sản phẩm từ **2-3 tuần thủ công** thành **30 giây tự động hóa 100% bằng AI Agent**:
+OpportunityOS vận hành trên nền tảng **Hệ thống Ra Quyết Định Đa Tiêu Chí (Multi-Criteria Decision Analysis - MCDA)** kết hợp mô hình học máy và phân tích ngữ nghĩa đa tầng.
 
-```mermaid
-flowchart LR
-    A[6 Sàn TMĐT Live] --> B[AI Crawlers]
-    B --> C[Clean IP Shield 3 Tầng]
-    C --> D[Mô Hình MCDA 6 Trụ Cột]
-    D --> E[Printway Matching Algorithm]
-    E --> F[Technical Product Brief & Ad Hooks]
+### 2.1. Công thức Tổng quát Điểm Cơ Hội ($S_{opp}$)
+
+$$\text{Opportunity Score } (S_{opp}) = \sum_{i=1}^{6} w_i \cdot P_i \quad \text{với } \sum w_i = 1.0$$
+
+Trong đó, $P_i \in [0, 100]$ là điểm chuẩn hóa của từng trụ cột và $w_i$ là trọng số chiến lược:
+
 ```
-
-* 🌐 **Cào Dữ Liệu Live Thời Gian Thực**: Hợp nhất hơn 2,000+ tín hiệu mua sắm thực tế từ **6 sàn TMĐT lớn nhất** (Amazon, TikTok Shop, Shopee, Lazada, Etsy, eBay).
-* 🛡️ **Clean IP Shield 3 Tầng**: Lá chắn bản quyền tự động quét Trademark USPTO, WIPO, phát hiện vi phạm bản quyền từ khóa thương hiệu.
-* 📊 **Mô Hình Định Lượng MCDA 6 Trụ Cột**: Đánh giá cơ hội qua 6 trọng số (Nhu cầu, Biên lãi, Chuỗi cung, Cạnh tranh, Bản quyền, Viral TikTok).
-* 🏭 **Thuật Toán Khớp Phôi Xưởng Printway**: Tự động bóc tách ngữ nghĩa, khớp mã SKU phôi chuẩn, chất liệu, kỹ thuật in và tính toán đệm lãi ròng thực tế.
-* 📋 **Bản Thiết Kế Kỹ Thuật (Brief)**: Xuất bản tự động quy cách sản phẩm, góc chụp mockup, target audience và 5 kịch bản hook video TikTok Viral.
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       MÔ HÌNH ĐỊNH LƯỢNG MCDA 6 TRỤ CỘT                     │
+├────────────────────────────────┬────────┬───────────────────────────────────┤
+│ Trụ cột (Pillar)               │Trọng số│ Phương pháp tính toán & Định lượng│
+├────────────────────────────────┼────────┼───────────────────────────────────┤
+│ 1. Nhu cầu & Tăng trưởng (D&G) │  25%   │ Volume tìm kiếm, Tốc độ tăng sales│
+│ 2. Biên lãi & Đệm lợi nhuận    │  20%   │ Margin %, Gross Profit, Khung CPA │
+│ 3. Khả thi Chuỗi cung (Printway)│ 15%   │ Độ khớp SKU phôi xưởng, SLA 48h   │
+│ 4. Mức độ Cạnh tranh (Comp)    │  15%   │ Mật độ đối thủ trực tiếp & Review │
+│ 5. An toàn Bản quyền (Clean IP)│  15%   │ Quét nhãn hiệu USPTO/WIPO 3 tầng  │
+│ 6. Tiềm năng Viral TikTok      │  10%   │ Chỉ số visual hooks & viral video │
+└────────────────────────────────┴────────┴───────────────────────────────────┘
+```
 
 ---
 
-## ⚙️ 3. Thuật Toán Matching Phôi Xưởng Printway
+### 2.2. Chi Tiết 6 Trụ Cột Đánh Giá
 
-Thuật toán **Semantic Multi-Tier Matching** của OpportunityOS phân tích sản phẩm và map trực tiếp với catalog phôi xưởng Printway theo quy tắc:
+#### 1. Trụ Cột Nhu Cầu & Tăng Trưởng ($P_1$ - Trọng số: 25%)
+* **Định nghĩa**: Đo lường sức mua thực tế và độ nóng của từ khóa trên cả 6 sàn TMĐT.
+* **Công thức**:
+  $$P_1 = \min\left(100, 30 \cdot \log_{10}(V_{search} + 1) + 0.4 \cdot \Delta S_{growth} + 0.3 \cdot Q_{sold}\right)$$
+* **Ý nghĩa thực chiến**: Đảm bảo sản phẩm có dòng người mua thực tế, không bị "đu đỉnh trend ảo".
+
+#### 2. Trụ Cột Biên Lãi & Đệm Lợi Nhuận Gộp ($P_2$ - Trọng số: 20%)
+* **Định nghĩa**: Tính toán đệm lợi nhuận để seller có đủ biên độ chi trả chi phí quảng cáo (Facebook Ads, TikTok Ads, Etsy Ads).
+* **Công thức**:
+  $$\text{Margin \%} = \frac{P_{retail} - \text{COGS}_{Printway} - \text{Fee}_{platform}}{P_{retail}} \times 100\%$$
+  $$P_2 = \begin{cases} 95 + \text{bonus} & \text{khi Margin } \ge 65\% \text{ và Net Profit } \ge \$12 \\ 75 \to 90 & \text{khi Margin } 50\% - 64\% \\ 30 \to 50 & \text{khi Margin } < 40\% \end{cases}$$
+
+#### 3. Trụ Cột Khả Thi Chuỗi Cung Printway ($P_3$ - Trọng số: 15%)
+* **Định nghĩa**: Kiểm tra độ sẵn sàng của phôi xưởng Printway, vật liệu gia công và cam kết **SLA 48h**.
+* **Công thức**:
+  $$P_3 = \text{MatchScore}(\text{Catalog}_{Printway}) \times 0.6 + \text{SLA\_Score}(48h) \times 0.4$$
+* **Tiêu chuẩn**: SLA sản xuất tiêu chuẩn **48 giờ** giúp seller đạt chỉ số vận chuyển xuất sắc trên TikTok Shop & Amazon.
+
+#### 4. Trụ Cột Mức Độ Cạnh Tranh ($P_4$ - Trọng số: 15%)
+* **Định nghĩa**: Đánh giá số lượng đối thủ cạnh tranh trực tiếp cùng ngách và điểm xếp hạng trung bình.
+* **Công thức**:
+  $$P_4 = 100 - \min(70, N_{competitors} \times 3.5) + \text{ReviewPenalty}$$
+
+#### 5. Trụ Cột Lá Chắn Bản Quyền Clean IP ($P_5$ - Trọng số: 15%)
+* **Định nghĩa**: Kiểm tra đối soát 3 tầng đối với từ khóa thương hiệu, danh mục nhãn hiệu đăng ký (USPTO Class 025, 021, 028) và WIPO.
+* **Cơ chế Penalty**: Nếu phát hiện Trademark vi phạm $\to P_5 = 0$, lập tức đánh cờ cảnh báo đỏ `Flagged: Trademark Risk`.
+
+#### 6. Trụ Cột Tiềm Năng Viral TikTok ($P_6$ - Trọng số: 10%)
+* **Định nghĩa**: Đánh giá tính trực quan (visual appeal), khả năng cá nhân hóa (Personalization) và tính cảm xúc (Emotional Gift) phù hợp với video ngắn.
+
+---
+
+## 🏭 3. Thuật Toán Matching Phôi Xưởng Printway (SLA 48h)
+
+Hệ thống sử dụng pipeline **Semantic Entity Extraction & Jaccard-Cosine Hybrid Distance** để bóc tách thông số sản phẩm cào từ sàn và khớp trực tiếp với catalog phôi xưởng Printway:
 
 ```
-[Live Crawled Product] 
-    ├── 1. Semantic Token Extraction (Title, Attributes, Material, Technique)
-    ├── 2. Fuzzy Keyword & Material Mapping (Inox 304, Optical Acrylic, Ceramic, Fleece)
-    ├── 3. Printway Catalog SKU Alignment (PW-DRINK-TUMB-20OZ, PW-ORNAMENT-CERAMIC, ...)
-    ├── 4. Real-time COGS & SLA Binding (Base Cost $4.5 - $14.0 | SLA 24-48h)
-    └── 5. Dynamic Net Profit Buffer Calculation (Selling Price - Base Cost - Platform Fees)
+[Sản phẩm cào từ Sàn TMĐT]
+    │
+    ├── 1. Phân tích Ngữ nghĩa (NLP Tokenizer & Attribute Parser)
+    │      └── Trích xuất: Title, Category, Keywords, Material, Print Type
+    │
+    ├── 2. Khớp Fuzzy & Cosine Similarity với Catalog Phôi Printway
+    │      ├── Inox 304, Vacuum Insulated ──> PW-DRINK-TUMB-20OZ
+    │      ├── Acrylic, 3D Night Lamp    ──> PW-GIFT-ACRYLIC-LIGHT
+    │      ├── Ceramic, Hanging Ribbon   ──> PW-ORNAMENT-CERAMIC
+    │      └── Heavy Cotton 250gsm       ──> PW-APP-TEE-HEAVY
+    │
+    ├── 3. Ràng buộc Chi Phí Gốc (COGS) & SLA Xưởng Chuẩn 48h
+    │      └── Tự động gán Base Cost, Kỹ thuật in UV / DTG / Khắc Laser
+    │
+    └── 4. Tính toán Đệm Lợi Nhuận Gộp & Đồ thị Biến động Giá 6 Tháng
 ```
+
+### 📋 Bảng Quy Chuẩn Phôi Xưởng Printway (Standard SLA 48h):
 
 | Ngách Sản Phẩm | Mã Phôi Printway Chuẩn | Chất Liệu & Kỹ Thuật In | COGS Xưởng | Giá Bán Thị Trường | Lãi Ròng / SP | SLA Xưởng |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Bình giữ nhiệt 20oz/40oz** | `PW-DRINK-TUMB-20OZ` | Inox 304 hai lớp chân không · In UV / Khắc Laser | **$8.50** | $29.99 | **+$16.99 (68%)** | 24h |
-| **Đèn ngủ Mica 3D Led** | `PW-GIFT-ACRYLIC-LIGHT` | Mica quang học cao cấp · Đế gỗ sồi tự nhiên | **$6.80** | $24.99 | **+$14.44 (65%)** | 24h |
-| **Đồ trang trí Giáng Sinh** | `PW-ORNAMENT-CERAMIC` | Gốm sứ tráng men 2 mặt · Dây treo ruy băng | **$3.20** | $16.99 | **+$11.24 (73%)** | 24h |
-| **Áo thun Streetwear 250gsm** | `PW-APP-TEE-HEAVY` | 100% Cotton định lượng cao · In kỹ thuật số DTG | **$7.50** | $27.99 | **+$16.09 (63%)** | 24h |
-| **Áo Hoodie Nỉ Bông** | `PW-APP-HOODIE-FLEECE` | Nỉ bông 320gsm co giãn · Thêu vi tính / In lụa | **$14.00** | $44.99 | **+$23.24 (59%)** | 48h |
+| **Bình giữ nhiệt 20oz/40oz** | `PW-DRINK-TUMB-20OZ` | Inox 304 hai lớp chân không · In UV / Khắc Laser | **$8.50** | $29.99 | **+$16.99 (68%)** | **48h** |
+| **Đèn ngủ Mica 3D Led** | `PW-GIFT-ACRYLIC-LIGHT` | Mica quang học cao cấp · Đế gỗ sồi tự nhiên | **$6.80** | $24.99 | **+$14.44 (65%)** | **48h** |
+| **Đồ trang trí Giáng Sinh** | `PW-ORNAMENT-CERAMIC` | Gốm sứ tráng men 2 mặt · Dây treo ruy băng | **$3.20** | $16.99 | **+$11.24 (73%)** | **48h** |
+| **Áo thun Streetwear 250gsm** | `PW-APP-TEE-HEAVY` | 100% Cotton định lượng cao · In kỹ thuật số DTG | **$7.50** | $27.99 | **+$16.09 (63%)** | **48h** |
+| **Áo Hoodie Nỉ Bông** | `PW-APP-HOODIE-FLEECE` | Nỉ bông 320gsm co giãn · Thêu vi tính / In lụa | **$14.00** | $44.99 | **+$23.24 (59%)** | **48h** |
 
 ---
 
@@ -79,34 +130,27 @@ OpportunityOS/
 ├── BE/                                # Python FastAPI Backend
 │   ├── app/
 │   │   ├── api/v1/                    # API Routers (/analyze, /hot-searches, /health)
-│   │   ├── core/                      # Configuration, Security & Settings
+│   │   ├── core/                      # Configuration, Security & Settings (.env)
 │   │   ├── models/                    # Pydantic Schemas & Data Contracts
 │   │   └── services/
-│   │       ├── crawl/                 # Multi-platform Realtime Crawlers
-│   │       │   ├── amazon.py          # Amazon Autocomplete & Live Signals
-│   │       │   ├── ebay.py            # eBay Market Demand Scraper
-│   │       │   ├── etsy.py            # Etsy Buyer Demand Signals
-│   │       │   ├── kalodata.py        # TikTok Shop Viral Discovery & Image Pool
-│   │       │   ├── lazada.py          # Lazada Regional E-commerce Crawler
-│   │       │   ├── shopee.py          # Shopee Search Hint Realtime Crawler
-│   │       │   └── service.py         # Crawl Orchestrator
-│   │       ├── ip_check/              # Clean IP Shield (Trademark & Brand Defense)
+│   │       ├── crawl/                 # Multi-platform Realtime Crawlers (6 Marketplaces)
+│   │       ├── ip_check/              # Clean IP Shield (USPTO / WIPO Defense)
 │   │       └── scoring/               # MCDA 6-Pillar Opportunity Scoring Engine
-│   ├── Dockerfile                     # Containerization image for Backend
-│   ├── requirements.txt               # Backend Python dependencies
-│   └── main.py                        # FastAPI Application Entrypoint
+│   ├── Dockerfile                     # Backend Containerization
+│   ├── requirements.txt               # Dependencies
+│   └── main.py                        # FastAPI Entrypoint
 │
 ├── frontend/                          # React 19 + TypeScript + Vite Frontend
 │   ├── src/
-│   │   ├── components/                # UI Components (Table, Stepper, BriefModal, Charts)
-│   │   ├── locales/                   # Vietnamese & English I18n translations
-│   │   ├── api.ts                     # API Client & Dynamic Market Trend Generators
-│   │   ├── App.tsx                    # Main App Controller & Interactive Dashboard
-│   │   └── index.css                  # Custom Dark Mode & Design Tokens
-│   ├── package.json                   # Frontend npm packages
-│   └── vite.config.ts                 # Vite bundler configuration
+│   │   ├── components/                # Responsive DataTable, Stepper, BriefModal
+│   │   ├── locales/                   # I18n Vietnamese & English
+│   │   ├── api.ts                     # API Client & Dynamic 6-Month Market Curve
+│   │   ├── App.tsx                    # Main App Controller
+│   │   └── index.css                  # Custom Dark Mode Design Tokens
+│   ├── package.json                   # Dependencies
+│   └── vite.config.ts                 # Bundler config
 │
-├── docker-compose.yml                 # Multi-service Orchestration config
+├── docker-compose.yml                 # Multi-service Orchestration
 └── README.md                          # Project Documentation
 ```
 
@@ -142,7 +186,7 @@ cd BE
 
 # Tạo môi trường ảo
 python3 -m venv .venv
-source .venv/bin/activate  # Trên Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Cài đặt thư viện
 pip install -r requirements.txt
@@ -165,8 +209,6 @@ npm install
 # Khởi chạy dev server
 npm run dev
 ```
-
-Truy cập dashboard tại `http://localhost:5173`.
 
 ---
 
@@ -195,7 +237,6 @@ GEMINI_API_KEY=""
 
 ### 1. Phân Tích Cơ Hội Sản Phẩm Toàn Diện
 * **Endpoint**: `POST /api/v1/analyze`
-* **Mô tả**: Cào đồng thời 6 sàn, quét bản quyền Clean IP, chấm điểm MCDA và khớp phôi Printway.
 * **Payload**:
 ```json
 {
@@ -211,7 +252,6 @@ GEMINI_API_KEY=""
 
 ### 3. Kiểm Tra Trạng Thái Hệ Thống (Health Check)
 * **Endpoint**: `GET /api/v1/health`
-* **Mô tả**: Kiểm tra uptime, SLA phản hồi của các microservices.
 
 ---
 
