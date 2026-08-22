@@ -670,9 +670,9 @@ function Sidebar({
         <button
           type="button"
           onClick={() => setFilters(initialFilters)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-white px-3 py-1.5 text-[11px] font-medium text-[#78716c] transition hover:border-[#b72727]/30 hover:bg-[#fafaf9] hover:text-[#b72727]"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-white px-3 py-2 text-xs font-semibold text-[#78716c] transition hover:border-[#b72727] hover:bg-[#fafaf9] hover:text-[#b72727]"
         >
-          <RefreshCcw className="h-3 w-3" />
+          <RefreshCcw className="h-3.5 w-3.5" />
           {t("Đặt lại bộ lọc", "Reset filters")}
         </button>
       </div>
@@ -771,7 +771,7 @@ function Discovery({
 
   const trendingNiches = [
     {
-      topic: "Pickleball Tumbler",
+      topic: "Bình Giữ Nhiệt 40oz (Insulated Tumbler)",
       tag: "Drinkware",
       sku: "PW-DRINK-TUMB-20OZ",
       growth: "+210%",
@@ -933,7 +933,7 @@ function Discovery({
         <div className="mt-3 flex items-center justify-between rounded-xl border border-[#f3d6d6] bg-[#fdf3f3] px-4 py-2.5 text-xs text-[#b72727]">
           <span>{error}</span>
           <button
-            onClick={() => onAnalyze(keyword || brand || "Pickleball", brand || undefined)}
+            onClick={() => onAnalyze(keyword || brand || "Bình giữ nhiệt", brand || undefined)}
             className="ml-3 font-bold underline underline-offset-2 hover:text-[#9a1f1f]"
           >
             {t("Thử lại", "Retry")}
@@ -981,7 +981,8 @@ function Discovery({
             {t("Gợi ý nhanh:", "Quick picks:")}
           </span>
           {[
-            "Pickleball Tumbler",
+            "Bình giữ nhiệt",
+            "Insulated Tumbler 40oz",
             "Halloween Ghost",
             "Quà Tặng Thú Cưng",
             "Teacher Appreciation",

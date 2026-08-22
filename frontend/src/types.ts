@@ -68,6 +68,7 @@ export interface Opportunity {
   name: string
   category: string
   target_niche: string
+  image_url?: string
   opportunity_score: number
   score_breakdown: Record<'demand_growth' | 'market_gap' | 'profit_margin' | 'supply_feasibility' | 'ip_safety' | 'tiktok_virality', number>
   score_rationales?: ScoreRationale
