@@ -268,7 +268,7 @@ export default function App() {
         <TopBar health={health} screen={screen} onReset={enterCopilot} />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1240px] p-5 sm:p-7 lg:p-9">
+          <div className="mx-auto w-full max-w-[1240px] px-6 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-8">
             {screen === "discovery" && (
               <Discovery
                 loading={loading}
@@ -848,7 +848,7 @@ function Discovery({
         })}
       </div>
 
-      <div className="seg mt-7 w-full sm:w-fit">
+      <div className="seg mt-7 w-full">
         <button
           type="button"
           onClick={() => { setSearchMode("KEYWORD"); setValidationMsg(""); }}
@@ -868,7 +868,7 @@ function Discovery({
       </div>
 
       <form
-        className="card mt-4 flex flex-col gap-2 p-2.5 transition focus-within:border-[#b72727] focus-within:shadow-[0_0_0_3px_rgba(183,39,39,0.08)] sm:flex-row sm:items-center"
+        className="card mt-4 flex flex-col gap-2 p-3 transition focus-within:border-[#b72727] focus-within:shadow-[0_0_0_3px_rgba(183,39,39,0.08)] sm:flex-row sm:items-center"
         onSubmit={handleSearchSubmit}
       >
         <label className="flex flex-1 items-center gap-3 px-3">
@@ -898,7 +898,7 @@ function Discovery({
                     "e.g. insulated bottle, pet gifts, halloween mug, pickleball…",
                   )
             }
-            autoFocus
+            
           />
         </label>
         <button className="btn-primary !px-6 !py-3 text-sm" disabled={loading}>
