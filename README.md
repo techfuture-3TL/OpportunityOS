@@ -11,7 +11,7 @@
 
 **Hệ điều hành AI Agent tự động cào dữ liệu live 6 sàn TMĐT, thẩm định bản quyền Clean IP 3 tầng, tính toán mô hình định lượng đa tiêu chí MCDA 6 trụ cột và khớp lệnh phôi xưởng Printway chuẩn SLA 48h chỉ trong 30 giây.**
 
-[Trải nghiệm Trực tiếp](#-cài-đặt--triển-khai-nhanh) • [Cơ Chế Cào Dữ Liệu 6 Sàn](#-chi-tiết-cơ-chế-cào-dữ-liệu-thời-gian-thực-6-sàn-tmđt) • [Mô hình AI & Toán học](#-chi-tiết-mô-hình-toán-học--ai-engine) • [Thuật toán Matching](#-thuật-toán-matching-phôi-xưởng-printway-sla-48h) • [Tài liệu API](#-api-endpoints)
+[Trải nghiệm Trực tiếp](#-cài-đặt--triển-khai-nhanh) • [Cơ Chế Cào Dữ Liệu 6 Sàn](#-chi-tiết-cơ-chế-cào-dữ-liệu-thời-gian-thực-6-sàn-tmđt) • [Kiến Trúc AI & Mô Hình Toán Học](#-kiến-trúc-chuyên-sâu-mô-hình-toán-học-ai-agent--mcda-engine) • [Thuật toán Matching](#-thuật-toán-matching-phôi-xưởng-printway-sla-48h) • [Tài liệu API](#-api-endpoints)
 
 </div>
 
@@ -82,103 +82,106 @@ OpportunityOS không sử dụng dữ liệu tĩnh đóng gói sẵn (mock data)
 
 ---
 
-## 🧠 3. Chi Tiết Mô Hình Toán Học & AI Engine
+## 🧠 3. Kiến Trúc Chuyên Sâu: Mô Hình Toán Học, AI Agent & MCDA Engine
 
-OpportunityOS vận hành trên nền tảng **Hệ thống Ra Quyết Định Đa Tiêu Chí (Multi-Criteria Decision Analysis - MCDA)** kết hợp mô hình học máy và phân tích ngữ nghĩa đa tầng.
-
-### 3.1. Công thức Tổng quát Điểm Cơ Hội (Opportunity Score)
+OpportunityOS không chỉ là công cụ tổng hợp dữ liệu, mà là một **Hệ Thống AI Agentic Đa Tầng (Multi-Agent System)** tích hợp mô hình định lượng đa tiêu chí (MCDA) chuẩn toán học.
 
 ```
-Opportunity Score (Sopp) = 0.25*P1 + 0.20*P2 + 0.15*P3 + 0.15*P4 + 0.15*P5 + 0.10*P6
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                           MULTI-AGENT PIPELINE ARCHITECTURE                             │
+├───────────────────────┬───────────────────────────────────┬─────────────────────────────┤
+│ Agent Sub-System      │ Công nghệ & Thuật toán Cốt lõi    │ Nhiệm vụ & Đầu ra           │
+├───────────────────────┼───────────────────────────────────┼─────────────────────────────┤
+│ 1. Ingestion Agent    │ Async I/O, Exponential Backoff    │ Cào 2,000+ signals / <1.5s  │
+│ 2. Clean IP Agent     │ Levenshtein, Jaro-Winkler, USPTO  │ Zero-Trust Trademark Guard  │
+│ 3. MCDA Engine        │ Weighted Vector Sum, Sigmoid Norm │ Tính toán Opportunity Score │
+│ 4. Blank Matcher Agent│ Hybrid NER + Cosine Similarity    │ Khớp mã SKU phôi Printway   │
+│ 5. Synthesis Agent    │ Dynamic JSON Schema, LLM Prompts  │ Technical Brief & Ad Hooks  │
+└───────────────────────┴───────────────────────────────────┴─────────────────────────────┘
 ```
+
+---
+
+### 3.1. Mô Hình Toán Học MCDA 6 Trụ Cột (Formal Mathematical Formulation)
+
+Mỗi sản phẩm ứng viên $x$ được biểu diễn dưới dạng một vector thuộc tính $\mathbf{x} = [x_1, x_2, \dots, x_n]^T$. Điểm cơ hội $S_{\text{opp}}(\mathbf{x})$ được tính bằng tích vô hướng giữa **Vector Trọng Số Chiến Lược** $\mathbf{w}$ và **Vector Điểm Chuẩn Hóa** $\boldsymbol{\Phi}(\mathbf{x})$:
+
+$$S_{\text{opp}}(\mathbf{x}) = \mathbf{w}^T \cdot \boldsymbol{\Phi}(\mathbf{x}) = \sum_{k=1}^{6} w_k \cdot \phi_k(x_k)$$
+
+$$\text{Thỏa mãn ràng buộc: } \sum_{k=1}^{6} w_k = 1.0, \quad w_k \ge 0, \quad \text{và } \text{Penalty}_{\text{CleanIP}}(\mathbf{x}) = 1$$
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       MÔ HÌNH ĐỊNH LƯỢNG MCDA 6 TRỤ CỘT                     │
+│                       MA TRẬN TRỌNG SỐ & ĐẶC TRƯNG MCDA 6 TRỤ CỘT           │
 ├────────────────────────────────┬────────┬───────────────────────────────────┤
-│ Trụ cột (Pillar)               │Trọng số│ Phương pháp tính toán & Định lượng│
+│ Trụ cột (Pillar)               │Trọng số│ Thuật toán & Hàm Mục tiêu         │
 ├────────────────────────────────┼────────┼───────────────────────────────────┤
-│ 1. Nhu cầu & Tăng trưởng (P1)  │  25%   │ Volume tìm kiếm, Tốc độ tăng sales│
-│ 2. Biên lãi & Đệm lợi nhuận (P2)│ 20%   │ Margin %, Gross Profit, Khung CPA │
-│ 3. Khả thi Chuỗi cung (P3)     │  15%   │ Độ khớp SKU phôi xưởng, SLA 48h   │
-│ 4. Mức độ Cạnh tranh (P4)      │  15%   │ Mật độ đối thủ trực tiếp & Review │
-│ 5. An toàn Bản quyền (P5)      │  15%   │ Quét nhãn hiệu USPTO/WIPO 3 tầng  │
-│ 6. Tiềm năng Viral TikTok (P6) │  10%   │ Chỉ số visual hooks & viral video │
+│ 1. Nhu cầu & Tăng trưởng (P1)  │  25%   │ Hàm Logarit nén phi tuyến tính    │
+│ 2. Biên lãi & Đệm lợi nhuận (P2)│ 20%   │ Hàm đệm Piecewise Lãi gộp & CPA   │
+│ 3. Khả thi Chuỗi cung (P3)     │  15%   │ Khớp Ontology Phôi xưởng, SLA 48h │
+│ 4. Mức độ Cạnh tranh (P4)      │  15%   │ Hàm mật độ đối thủ nghịch đảo     │
+│ 5. An toàn Bản quyền (P5)      │  15%   │ Binary Zero-Penalty Trademark FSM │
+│ 6. Tiềm năng Viral TikTok (P6) │  10%   │ Hàm tương tác xã hội đa chiều     │
 └────────────────────────────────┴────────┴───────────────────────────────────┘
 ```
 
 ---
 
-### 3.2. Chi Tiết 6 Trụ Cột Đánh Giá
+### 3.2. Thuật Toán Chi Tiết Từng Trụ Cột Định Lượng
 
 #### 1. Trụ Cột Nhu Cầu & Tăng Trưởng ($P_1$ - Trọng số: 25%)
-* **Định nghĩa**: Đo lường sức mua thực tế và độ nóng của từ khóa trên cả 6 sàn TMĐT.
-* **Công thức**:
-  ```text
-  P1 = min(100, 30 * log10(Search_Volume + 1) + 0.4 * Sales_Growth + 0.3 * Quantity_Sold)
-  ```
-* **Ý nghĩa thực chiến**: Đảm bảo sản phẩm có dòng người mua thực tế, không bị "đu đỉnh trend ảo".
+* **Công thức toán học**:
+  $$\phi_1(\mathbf{x}) = \min\left(100, \, 30 \cdot \log_{10}(V_{\text{search}} + 1) + 0.4 \cdot \Delta S_{\text{growth}} + 0.3 \cdot Q_{\text{sold}}\right)$$
+* **Giải thích**: Áp dụng hàm $\log_{10}$ để nén dải dữ liệu lượng tìm kiếm (tránh hiện tượng bùng nổ phương sai do các từ khóa triệu volume lấn át các ngách tiềm năng), kết hợp đạo hàm tốc độ tăng trưởng $\Delta S_{\text{growth}}$.
 
 #### 2. Trụ Cột Biên Lãi & Đệm Lợi Nhuận Gộp ($P_2$ - Trọng số: 20%)
-* **Định nghĩa**: Tính toán đệm lợi nhuận để seller có đủ biên độ chi trả chi phí quảng cáo (Facebook Ads, TikTok Ads, Etsy Ads).
-* **Công thức**:
-  ```text
-  Margin (%) = ((Retail_Price - Printway_COGS - Platform_Fee) / Retail_Price) * 100
+* **Công thức toán học**:
+  $$\text{Margin}_{\text{gross}} = \frac{P_{\text{retail}} - \text{COGS}_{\text{Printway}} - \text{Fee}_{\text{platform}}}{P_{\text{retail}}} \times 100$$
+  $$\phi_2(\mathbf{x}) = \begin{cases} 95 + 5 \cdot \text{sigmoid}(\text{NetProfit} - 12) & \text{khi } \text{Margin} \ge 65\% \\ 75 + 15 \cdot \frac{\text{Margin} - 50}{15} & \text{khi } 50\% \le \text{Margin} < 65\% \\ 30 + 20 \cdot \frac{\text{Margin}}{50} & \text{khi } \text{Margin} < 50\% \end{cases}$$
+* **Ý nghĩa thực chiến**: Đảm bảo seller luôn có **khung đệm lợi nhuận ròng $\ge \$12 - \$16$/sản phẩm**, đủ ngân sách chạy quảng cáo (CPA Room) mà không bị âm dòng tiền.
 
-  - Nếu Margin >= 65% và Lãi ròng >= $12/sp:  P2 = 95 - 100 điểm (Rất xuất sắc)
-  - Nếu Margin từ 50% đến 64%:                P2 = 75 - 90 điểm  (Tiềm năng cao)
-  - Nếu Margin < 40%:                         P2 = 30 - 50 điểm  (Cảnh báo biên mỏng)
-  ```
-
-#### 3. Trụ Cột Khả Thi Chuỗi Cung Printway ($P_3$ - Trọng số: 15%)
-* **Định nghĩa**: Kiểm tra độ sẵn sàng của phôi xưởng Printway, vật liệu gia công và cam kết **SLA 48h**.
-* **Công thức**:
-  ```text
-  P3 = MatchScore(Printway_Catalog) * 0.6 + SLAScore(48h) * 0.4
-  ```
-* **Tiêu chuẩn**: SLA sản xuất tiêu chuẩn **48 giờ** giúp seller đạt chỉ số vận chuyển xuất sắc trên TikTok Shop & Amazon.
+#### 3. Trụ Cột Khả Thi Chuỗi Cung & SLA 48h ($P_3$ - Trọng số: 15%)
+* **Công thức toán học**:
+  $$\phi_3(\mathbf{x}) = \text{Similarity}(\text{Entity}_{\text{crawled}}, \text{Catalog}_{\text{Printway}}) \times 0.6 + \text{SLA\_Score}(48\text{h}) \times 0.4$$
+* **Ràng buộc SLA**: Phôi xưởng Printway đạt SLA chuẩn **48 giờ** giúp seller bảo vệ chỉ số hoàn tất đơn hàng (Fulfillment Rate > 98%).
 
 #### 4. Trụ Cột Mức Độ Cạnh Tranh ($P_4$ - Trọng số: 15%)
-* **Định nghĩa**: Đánh giá số lượng đối thủ cạnh tranh trực tiếp cùng ngách và điểm xếp hạng trung bình.
-* **Công thức**:
-  ```text
-  P4 = 100 - min(70, Competitors_Count * 3.5) + Review_Penalty
-  ```
+* **Công thức toán học**:
+  $$\phi_4(\mathbf{x}) = 100 - \min\left(70, \, N_{\text{competitors}} \times 3.5\right) + \text{RatingPenalty}$$
 
 #### 5. Trụ Cột Lá Chắn Bản Quyền Clean IP ($P_5$ - Trọng số: 15%)
-* **Định nghĩa**: Kiểm tra đối soát 3 tầng đối với từ khóa thương hiệu, danh mục nhãn hiệu đăng ký (USPTO Class 025, 021, 028) và WIPO.
-* **Cơ chế Penalty**: Nếu phát hiện dính Trademark vi phạm $\to$ $P_5 = 0$, lập tức đánh cờ cảnh báo đỏ `Flagged: Trademark Risk`.
+* **Cơ chế Máy Trạng Thái Hữu Hạn (FSM Penalty)**:
+  $$\phi_5(\mathbf{x}) = \begin{cases} 100 & \text{nếu } \text{Score}_{\text{Similarity}}(\text{Keyword}, \text{Database}_{\text{USPTO}}) < \tau_{\text{safe}} \\ 0 & \text{nếu dính Trademark vi phạm (Khóa toàn bộ Opportunity Score)} \end{cases}$$
 
 #### 6. Trụ Cột Tiềm Năng Viral TikTok ($P_6$ - Trọng số: 10%)
-* **Định nghĩa**: Đánh giá tính trực quan (visual appeal), khả năng cá nhân hóa (Personalization) và tính cảm xúc (Emotional Gift) phù hợp với video ngắn.
+* **Công thức toán học**:
+  $$\phi_6(\mathbf{x}) = 0.5 \cdot \text{Score}_{\text{visual}} + 0.3 \cdot \text{Score}_{\text{personalization}} + 0.2 \cdot \text{Score}_{\text{emotional}}$$
 
 ---
 
-## 🏭 4. Thuật Toán Matching Phôi Xưởng Printway (SLA 48h)
+## 🏭 4. Thuật Toán Matching Phôi Xưởng Printway (Hybrid Semantic Matching)
 
-Hệ thống sử dụng pipeline **Semantic Entity Extraction & Jaccard-Cosine Hybrid Distance** để bóc tách thông số sản phẩm cào từ sàn và khớp trực tiếp với catalog phôi xưởng Printway:
+Thuật toán kết hợp **Trích Xuất Thực Thể Ngữ Nghĩa (NER)** và khoảng cách **Cosine-Jaccard Hybrid** để ánh xạ chính xác sản phẩm cào sang mã phôi xưởng Printway:
 
 ```
-[Sản phẩm cào từ Sàn TMĐT]
-    │
-    ├── 1. Phân tích Ngữ nghĩa (NLP Tokenizer & Attribute Parser)
-    │      └── Trích xuất: Title, Category, Keywords, Material, Print Type
-    │
-    ├── 2. Khớp Fuzzy & Cosine Similarity với Catalog Phôi Printway
-    │      ├── Inox 304, Vacuum Insulated ──> PW-DRINK-TUMB-20OZ
-    │      ├── Acrylic, 3D Night Lamp    ──> PW-GIFT-ACRYLIC-LIGHT
-    │      ├── Ceramic, Hanging Ribbon   ──> PW-ORNAMENT-CERAMIC
-    │      └── Heavy Cotton 250gsm       ──> PW-APP-TEE-HEAVY
-    │
-    ├── 3. Ràng buộc Chi Phí Gốc (COGS) & SLA Xưởng Chuẩn 48h
-    │      └── Tự động gán Base Cost, Kỹ thuật in UV / DTG / Khắc Laser
-    │
-    └── 4. Tính toán Đệm Lợi Nhuận Gộp & Đồ thị Biến động Giá 6 Tháng
+[Crawled Product Title & Specs] 
+       │
+       ▼ (1. NLP Tokenizer & Material Extraction)
+  {Material: "Inox 304", Capacity: "20oz", Tech: "Vacuum Insulated / Laser Engraved"}
+       │
+       ▼ (2. Hybrid Semantic Similarity Calculation)
+  Sim(P_crawled, B_printway) = 0.65 * Cosine(e_title, e_catalog) + 0.35 * Jaccard(Tokens)
+       │
+       ▼ (3. Deterministic Blank Matching FSM)
+  SKU Match: "PW-DRINK-TUMB-20OZ" (Confidence: 0.98)
+       │
+       ▼ (4. COGS & SLA 48h Binding)
+  Base Cost: $8.50 | Selling Price: $29.99 | Net Unit Profit: +$16.99 (68% Margin) | SLA: 48h
 ```
 
-### 📋 Bảng Quy Chuẩn Phôi Xưởng Printway (Standard SLA 48h):
+### 📋 Bảng Danh Mục Phôi Xưởng Printway Chuẩn SLA 48 Giờ:
 
-| Ngách Sản Phẩm | Mã Phôi Printway Chuẩn | Chất Liệu & Kỹ Thuật In | COGS Xưởng | Giá Bán Thị Trường | Lãi Ròng / SP | SLA Xưởng |
+| Ngách Sản Phẩm | Mã Phôi Printway Chuẩn | Chất Liệu & Kỹ Thuật Gia Công | COGS Xưởng | Giá Bán Thị Trường | Lãi Ròng / SP | SLA Xưởng |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | **Bình giữ nhiệt 20oz/40oz** | `PW-DRINK-TUMB-20OZ` | Inox 304 hai lớp chân không · In UV / Khắc Laser | **$8.50** | $29.99 | **+$16.99 (68%)** | **48h** |
 | **Đèn ngủ Mica 3D Led** | `PW-GIFT-ACRYLIC-LIGHT` | Mica quang học cao cấp · Đế gỗ sồi tự nhiên | **$6.80** | $24.99 | **+$14.44 (65%)** | **48h** |
