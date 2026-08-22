@@ -153,7 +153,7 @@ function applyFrontendConstraints(
     payload.market_and_niche.categories.map((category) => category.toLowerCase()),
   )
 
-  return opportunities.filter((item) => {
+  const qualified = opportunities.filter((item) => {
     const categoryMatches =
       selectedCategories.size === 0 || selectedCategories.has(item.category.toLowerCase())
     const growthMatches =
@@ -166,6 +166,28 @@ function applyFrontendConstraints(
 
     return categoryMatches && growthMatches && marginMatches && cogsMatches && priceMatches
   })
+
+  // "Auto crawl all" must remain visible as multi-marketplace analysis. Keep
+  // the strongest candidate from every requested marketplace even when a
+  // marketplace's best listing narrowly misses a secondary UI constraint.
+  const result = [...qualified]
+  const represented = new Set(result.flatMap((item) => item.marketplace_sources ?? []))
+  const requestedLabels = payload.market_and_niche.selected_marketplaces
+    .map((source) => SOURCE_LABELS[source.toLowerCase()])
+    .filter(Boolean)
+
+  for (const label of requestedLabels) {
+    if (represented.has(label)) continue
+    const candidate = opportunities
+      .filter((item) => item.marketplace_sources?.includes(label))
+      .sort((a, b) => b.opportunity_score - a.opportunity_score)[0]
+    if (candidate && !result.some((item) => item.id === candidate.id)) {
+      result.push(candidate)
+      represented.add(label)
+    }
+  }
+
+  return result.sort((a, b) => b.opportunity_score - a.opportunity_score)
 }
 
 export const analyzeOpportunities = async (payload: AnalyzeOpportunitiesPayload): Promise<AnalysisResult> => {
