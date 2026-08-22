@@ -121,9 +121,13 @@ OpportunityOS không chỉ là công cụ tổng hợp dữ liệu, mà là mộ
 
 Mỗi sản phẩm ứng viên $x$ được biểu diễn dưới dạng một vector thuộc tính $\mathbf{x} = [x_1, x_2, \dots, x_n]^T$. Điểm cơ hội $S_{\text{opp}}(\mathbf{x})$ được tính bằng tích vô hướng giữa **Vector Trọng Số Chiến Lược** $\mathbf{w}$ và **Vector Điểm Chuẩn Hóa** $\boldsymbol{\Phi}(\mathbf{x})$:
 
-$$S_{\text{opp}}(\mathbf{x}) = \mathbf{w}^T \cdot \boldsymbol{\Phi}(\mathbf{x}) = \sum_{k=1}^{6} w_k \cdot \phi_k(x_k)$$
+```text
+Opportunity Score (Sopp) = 0.25*P1 + 0.20*P2 + 0.15*P3 + 0.15*P4 + 0.15*P5 + 0.10*P6
+```
 
-$$\text{Thỏa mãn ràng buộc: } \sum_{k=1}^{6} w_k = 1.0, \quad w_k \ge 0, \quad \text{và } \text{Penalty}_{\text{CleanIP}}(\mathbf{x}) = 1$$
+Ràng buộc hệ thống:
+- Tổng trọng số: `w1 + w2 + w3 + w4 + w5 + w6 = 1.0` (với `wk >= 0`)
+- Điều kiện tiên quyết: `CleanIP_Check(x) == True` (Nếu dính nhãn hiệu Trademark -> Điểm cơ hội = 0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -134,7 +138,7 @@ $$\text{Thỏa mãn ràng buộc: } \sum_{k=1}^{6} w_k = 1.0, \quad w_k \ge 0, \
 │ 1. Nhu cầu & Tăng trưởng (P1)  │  25%   │ Hàm Logarit nén phi tuyến tính    │
 │ 2. Biên lãi & Đệm lợi nhuận (P2)│ 20%   │ Hàm đệm Piecewise Lãi gộp & CPA   │
 │ 3. Khả thi Chuỗi cung (P3)     │  15%   │ Khớp Ontology Phôi xưởng, SLA 48h │
-│ 4. Mức độ Cạnh tranh (P4)      │  15%   │ Mật độ đối thủ nghịch đảo     │
+│ 4. Mức độ Cạnh tranh (P4)      │  15%   │ Mật độ đối thủ nghịch đảo         │
 │ 5. An toàn Bản quyền (P5)      │  15%   │ Binary Zero-Penalty Trademark FSM │
 │ 6. Tiềm năng Viral TikTok (P6) │  10%   │ Hàm tương tác xã hội đa chiều     │
 └────────────────────────────────┴────────┴───────────────────────────────────┘
@@ -144,33 +148,49 @@ $$\text{Thỏa mãn ràng buộc: } \sum_{k=1}^{6} w_k = 1.0, \quad w_k \ge 0, \
 
 ### 3.2. Thuật Toán Chi Tiết Từng Trụ Cột Định Lượng
 
-#### 1. Trụ Cột Nhu Cầu & Tăng Trưởng ($P_1$ - Trọng số: 25%)
-* **Công thức toán học**:
-  $$\phi_1(\mathbf{x}) = \min\left(100, \, 30 \cdot \log_{10}(V_{\text{search}} + 1) + 0.4 \cdot \Delta S_{\text{growth}} + 0.3 \cdot Q_{\text{sold}}\right)$$
-* **Giải thích**: Áp dụng hàm $\log_{10}$ để nén dải dữ liệu lượng tìm kiếm (tránh hiện tượng bùng nổ phương sai do các từ khóa triệu volume lấn át các ngách tiềm năng), kết hợp đạo hàm tốc độ tăng trưởng $\Delta S_{\text{growth}}$.
+#### 1. Trụ Cột Nhu Cầu & Tăng Trưởng (P1 - Trọng số: 25%)
+* **Công thức**:
+  ```text
+  P1 = min(100, 30 * log10(Search_Volume + 1) + 0.4 * Sales_Growth + 0.3 * Quantity_Sold)
+  ```
+* **Giải thích**: Áp dụng hàm `log10` để nén dải dữ liệu lượng tìm kiếm (tránh hiện tượng bùng nổ phương sai do các từ khóa triệu volume lấn át các ngách tiềm năng), kết hợp đạo hàm tốc độ tăng trưởng `Sales_Growth`.
 
-#### 2. Trụ Cột Biên Lãi & Đệm Lợi Nhuận Gộp ($P_2$ - Trọng số: 20%)
-* **Công thức toán học**:
-  $$\text{Margin}_{\text{gross}} = \frac{P_{\text{retail}} - \text{COGS}_{\text{Printway}} - \text{Fee}_{\text{platform}}}{P_{\text{retail}}} \times 100$$
-  $$\phi_2(\mathbf{x}) = \begin{cases} 95 + 5 \cdot \text{sigmoid}(\text{NetProfit} - 12) & \text{khi } \text{Margin} \ge 65\% \\ 75 + 15 \cdot \frac{\text{Margin} - 50}{15} & \text{khi } 50\% \le \text{Margin} < 65\% \\ 30 + 20 \cdot \frac{\text{Margin}}{50} & \text{khi } \text{Margin} < 50\% \end{cases}$$
+#### 2. Trụ Cột Biên Lãi & Đệm Lợi Nhuận Gộp (P2 - Trọng số: 20%)
+* **Công thức**:
+  ```text
+  Margin (%) = ((Retail_Price - Printway_COGS - Platform_Fee) / Retail_Price) * 100
+
+  - Nếu Margin >= 65% và Lãi ròng >= $12/sp:  P2 = 95 - 100 điểm (Rất xuất sắc)
+  - Nếu Margin từ 50% đến 64%:                P2 = 75 - 90 điểm  (Tiềm năng cao)
+  - Nếu Margin < 40%:                         P2 = 30 - 50 điểm  (Cảnh báo biên mỏng)
+  ```
 * **Ý nghĩa thực chiến**: Đảm bảo seller luôn có **khung đệm lợi nhuận ròng $\ge \$12 - \$16$/sản phẩm**, đủ ngân sách chạy quảng cáo (CPA Room) mà không bị âm dòng tiền.
 
-#### 3. Trụ Cột Khả Thi Chuỗi Cung & SLA 48h ($P_3$ - Trọng số: 15%)
-* **Công thức toán học**:
-  $$\phi_3(\mathbf{x}) = \text{Similarity}(\text{Entity}_{\text{crawled}}, \text{Catalog}_{\text{Printway}}) \times 0.6 + \text{SLA\_Score}(48\text{h}) \times 0.4$$
+#### 3. Trụ Cột Khả Thi Chuỗi Cung & SLA 48h (P3 - Trọng số: 15%)
+* **Công thức**:
+  ```text
+  P3 = MatchScore(Printway_Catalog) * 0.6 + SLAScore(48h) * 0.4
+  ```
 * **Ràng buộc SLA**: Phôi xưởng Printway đạt SLA chuẩn **48 giờ** giúp seller bảo vệ chỉ số hoàn tất đơn hàng (Fulfillment Rate > 98%).
 
-#### 4. Trụ Cột Mức Độ Cạnh Tranh ($P_4$ - Trọng số: 15%)
-* **Công thức toán học**:
-  $$\phi_4(\mathbf{x}) = 100 - \min\left(70, \, N_{\text{competitors}} \times 3.5\right) + \text{RatingPenalty}$$
+#### 4. Trụ Cột Mức Độ Cạnh Tranh (P4 - Trọng số: 15%)
+* **Công thức**:
+  ```text
+  P4 = 100 - min(70, Competitors_Count * 3.5) + Rating_Penalty
+  ```
 
-#### 5. Trụ Cột Lá Chắn Bản Quyền Clean IP ($P_5$ - Trọng số: 15%)
+#### 5. Trụ Cột Lá Chắn Bản Quyền Clean IP (P5 - Trọng số: 15%)
 * **Cơ chế Máy Trạng Thái Hữu Hạn (FSM Penalty)**:
-  $$\phi_5(\mathbf{x}) = \begin{cases} 100 & \text{nếu } \text{Score}_{\text{Similarity}}(\text{Keyword}, \text{Database}_{\text{USPTO}}) < \tau_{\text{safe}} \\ 0 & \text{nếu dính Trademark vi phạm (Khóa toàn bộ Opportunity Score)} \end{cases}$$
+  ```text
+  - Nếu Sạch Bản Quyền (Clean IP):              P5 = 80 - 100 điểm
+  - Nếu Dính Trademark vi phạm (USPTO/WIPO):    P5 = 0 điểm (Khóa cờ đỏ Trademark Risk)
+  ```
 
-#### 6. Trụ Cột Tiềm Năng Viral TikTok ($P_6$ - Trọng số: 10%)
-* **Công thức toán học**:
-  $$\phi_6(\mathbf{x}) = 0.5 \cdot \text{Score}_{\text{visual}} + 0.3 \cdot \text{Score}_{\text{personalization}} + 0.2 \cdot \text{Score}_{\text{emotional}}$$
+#### 6. Trụ Cột Tiềm Năng Viral TikTok (P6 - Trọng số: 10%)
+* **Công thức**:
+  ```text
+  P6 = 0.5 * Score_Visual_Appeal + 0.3 * Score_Personalization + 0.2 * Score_Emotional_Hook
+  ```
 
 ---
 
