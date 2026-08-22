@@ -512,8 +512,29 @@ class ScoringService:
         self,
         signals: List[Dict],
         limit: int = 10,
-        min_score: float = 40.0,
+        min_score: float = 35.0,
     ) -> List[OpportunityItem]:
-        """Get top N opportunities above minimum score."""
+        """Get top N opportunities above minimum score with balanced multi-platform representation."""
         scored = self.score(signals)
-        return [opp for opp in scored if opp.opportunity_score >= min_score][:limit]
+        valid = [opp for opp in scored if opp.opportunity_score >= min_score]
+        if not valid:
+            return []
+
+        # Group by platform source
+        by_source: Dict[str, List[OpportunityItem]] = {}
+        for opp in valid:
+            src = (opp.source or "unknown").lower()
+            by_source.setdefault(src, []).append(opp)
+
+        # Round-robin selection to guarantee balanced items across all platforms
+        balanced: List[OpportunityItem] = []
+        max_len = max((len(items) for items in by_source.values()), default=0)
+        for i in range(max_len):
+            for src in sorted(by_source.keys()):
+                items = by_source[src]
+                if i < len(items):
+                    balanced.append(items[i])
+
+        # Return at least 4 items per platform or requested limit
+        target_limit = max(limit, len(by_source) * 4)
+        return balanced[:target_limit]
