@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 from bs4 import BeautifulSoup
 import httpx
 
+from .search_index import attach_images, fetch_indexed_marketplace_listings
+
 _USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -129,10 +131,21 @@ class EtsyCrawler:
         """Crawl Etsy for live product listings in real time."""
         print(f"[etsy] Live Crawling: query='{query}'")
 
-        # 1. Primary: Live buyer query autocomplete with real dynamic photos
-        products = await _fetch_etsy_suggestions(query, limit)
+        # 1. Etsy returns a bot challenge to datacenter IPs. Use real listings
+        # from the public search index before falling back to buyer intent.
+        products = await fetch_indexed_marketplace_listings(query, "etsy", limit)
+        if products:
+            await attach_images(products, await _fetch_live_images_for_query(query, limit))
 
-        # 2. Fallback: Topic creation with dynamic live image
+        # 2. Live buyer query autocomplete fallback.
+        if not products:
+            products = await _fetch_etsy_suggestions(query, limit)
+            for product in products:
+                product.setdefault("data_mode", "buyer_intent")
+                product.setdefault("is_synthetic", True)
+                product.setdefault("estimated_fields", ["price", "revenue", "quantity_sold", "growth_rate", "rating", "reviews_count"])
+
+        # 3. Last-resort topic fallback.
         if not products:
             live_imgs = await _fetch_live_images_for_query(query, limit=2)
             products.append({
@@ -148,13 +161,20 @@ class EtsyCrawler:
                 "reviews_count": 75,
                 "url": f"https://www.etsy.com/search?q={urllib.parse.quote(query)}",
                 "image_url": live_imgs[0] if live_imgs else "",
+                "data_mode": "topic_fallback",
+                "is_synthetic": True,
+                "estimated_fields": ["price", "revenue", "quantity_sold", "growth_rate", "rating", "reviews_count"],
             })
 
+        data_mode = products[0].get("data_mode", "unknown") if products else "empty"
         result = {
             "source": "etsy",
             "query": query,
             "products": products[:limit],
             "success": len(products) > 0,
+            "data_mode": data_mode,
+            "degraded": data_mode != "marketplace_html",
+            "warning": "Etsy blocks direct datacenter requests (HTTP 403); using indexed real listings." if data_mode == "search_index" else None,
         }
         print(f"[etsy] Got {len(result['products'])} live products with dynamic images")
         return result

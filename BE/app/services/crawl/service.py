@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Optional
 
 from app.core.config import settings
 
+DEFAULT_CRAWL_SOURCES = ("tiktok", "amazon", "ebay", "shopee", "lazada", "etsy")
+
 
 class CrawlService:
     """
@@ -37,7 +39,14 @@ class CrawlService:
         start_time = time.time()
 
         # Determine which sources to crawl
-        target_sources = sources if sources else self.sources
+        requested_sources = sources if sources else self.sources
+        target_sources = list(
+            dict.fromkeys(
+                source.strip().lower()
+                for source in requested_sources
+                if source and source.strip()
+            )
+        )
 
         print(f"[crawl] Run {run_id}: query='{query}', sources={target_sources}")
 
@@ -142,8 +151,9 @@ class CrawlService:
                 "live_revenue": p.get("live_revenue", 0),
                 "views": p.get("views", 0),
                 # Technical
-                "is_synthetic": False,
-                "estimated_fields": [],
+                "is_synthetic": bool(p.get("is_synthetic", False)),
+                "estimated_fields": list(p.get("estimated_fields", [])),
+                "data_mode": p.get("data_mode", "marketplace_html"),
             }
             signals.append(signal)
         return signals

@@ -21,7 +21,7 @@ from app.models.schemas import (
     RecommendationReport,
     TimeWindow,
 )
-from app.services.crawl.service import CrawlService
+from app.services.crawl.service import CrawlService, DEFAULT_CRAWL_SOURCES
 from app.services.scoring.service import ScoringService
 
 
@@ -65,7 +65,7 @@ class AgentService:
         elif sources:
             pass
         else:
-            sources = ["tiktok"] if settings.has_kalodata_key else ["amazon", "ebay"]
+            sources = list(DEFAULT_CRAWL_SOURCES)
 
         trace.append(f"[{_iso_now()}] Sources: {sources}, window: {days}d")
 

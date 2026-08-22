@@ -930,33 +930,36 @@ table {
   position: fixed;
   inset: 0;
   z-index: 50;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 24px;
   background: rgba(28, 25, 23, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 
 .modal-panel {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 800px;
+  max-height: calc(100dvh - 48px);
   border-radius: var(--radius-xl);
   background: var(--panel);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-2xl);
   overflow: hidden;
   animation: scale-in var(--duration-slow) var(--ease-out) both;
-  margin-top: 48px;
-  margin-bottom: 48px;
 }
 
 .modal-body {
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
 
@@ -1134,13 +1137,12 @@ table {
    ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   .modal-backdrop {
-    padding: 16px;
+    padding: 8px;
   }
 
   .modal-panel {
+    max-height: calc(100dvh - 16px);
     border-radius: var(--radius-lg);
-    margin-top: 24px;
-    margin-bottom: 24px;
   }
 }
 

@@ -9,6 +9,8 @@ import urllib.parse
 from typing import Any, Dict, List, Optional
 import httpx
 
+from .search_index import attach_images, fetch_indexed_marketplace_listings
+
 _USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -181,19 +183,37 @@ class LazadaCrawler:
                                 "reviews_count": int(item.get("review", 0)),
                                 "url": f"https://www.lazada.vn/products/-i{item_id}.html",
                                 "image_url": item.get("image", ""),
+                                "data_mode": "marketplace_html",
+                                "is_synthetic": False,
+                                "estimated_fields": ["growth_rate"],
                             })
         except Exception as e:
             print(f"[lazada] catalog error: {e}")
 
-        # 2. Fallback to live buyer search intent with real dynamic images
+        # 2. Lazada frequently returns an X5 JavaScript challenge to datacenter
+        # IPs. Recover real indexed Lazada product URLs/titles first.
+        if not products:
+            products = await fetch_indexed_marketplace_listings(query, "lazada", limit)
+            if products:
+                await attach_images(products, await _fetch_live_images_for_lazada(query, limit))
+
+        # 3. Buyer-intent fallback when no indexed listings are available.
         if not products:
             products = await _fetch_suggestions(query, limit=limit)
+            for product in products:
+                product.setdefault("data_mode", "buyer_intent")
+                product.setdefault("is_synthetic", True)
+                product.setdefault("estimated_fields", ["price", "revenue", "quantity_sold", "growth_rate", "rating", "reviews_count"])
 
+        data_mode = products[0].get("data_mode", "unknown") if products else "empty"
         result = {
             "source": "lazada",
             "query": query,
             "products": products[:limit],
             "success": len(products) > 0,
+            "data_mode": data_mode,
+            "degraded": data_mode != "marketplace_html",
+            "warning": "Lazada returned an X5 anti-bot challenge; using indexed real listings." if data_mode == "search_index" else None,
         }
         print(f"[lazada] Got {len(result['products'])} products with real images")
         return result

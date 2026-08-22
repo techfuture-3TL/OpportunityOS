@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from app.core.responses import ApiResponse
 from app.models.schemas import DataSource, TimeWindow, StrategyPreset, ScoringStrategy
 from app.services.agent.service import AgentService
-from app.services.crawl.service import CrawlService
+from app.services.crawl.service import CrawlService, DEFAULT_CRAWL_SOURCES
 from app.services.scoring.service import ScoringService
 
 
@@ -65,7 +65,7 @@ async def crawl_marketplace(request: CrawlRequestIn) -> ApiResponse:
     sources = request.sources
     if not sources and request.platform:
         if request.platform.lower() in ("all", "*"):
-            sources = ["ebay", "amazon", "etsy", "tiktok", "shopee"]
+            sources = list(DEFAULT_CRAWL_SOURCES)
         else:
             sources = [s.strip().lower() for s in request.platform.split(",") if s.strip()]
 

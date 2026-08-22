@@ -35,7 +35,10 @@ class Settings:
     LLM_CACHE_TTL_S: int = int(os.getenv("LLM_CACHE_TTL_S", "3600"))
 
     # Crawl Settings
-    CRAWL_SOURCES: str = os.getenv("CRAWL_SOURCES", "tiktok,ebay,amazon")
+    CRAWL_SOURCES: str = os.getenv(
+        "CRAWL_SOURCES",
+        "tiktok,amazon,ebay,shopee,lazada,etsy",
+    )
     CRAWL_WATCHLIST: str = os.getenv(
         "CRAWL_WATCHLIST",
         "personalized tumbler,halloween decor,christmas ornament,mug"
