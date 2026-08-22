@@ -2760,12 +2760,25 @@ function BriefModal({
             <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="space-y-5">
                 <div className="card flex items-center gap-4 p-4">
-                  <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#b72727] font-mono text-2xl font-bold text-white">
-                    {opportunity.opportunity_score}
-                  </span>
-                  <div>
-                    <span className="badge badge-red">{categoryName(opportunity.category)}</span>
-                    <p className="mt-1.5 text-xs t-2">
+                  {((opportunity as any).image_url || (opportunity as any).img_url || (opportunity as any).thumbnail) ? (
+                    <img
+                      src={(opportunity as any).image_url || (opportunity as any).img_url || (opportunity as any).thumbnail}
+                      alt={opportunity.name}
+                      className="h-20 w-20 shrink-0 rounded-2xl border border-[#e7e5e4] object-cover shadow-sm"
+                    />
+                  ) : (
+                    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#b72727] font-mono text-2xl font-bold text-white">
+                      {opportunity.opportunity_score}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="badge badge-red">{categoryName(opportunity.category)}</span>
+                      <span className="rounded-lg bg-[#b72727] px-2 py-0.5 font-mono text-xs font-bold text-white">
+                        {opportunity.opportunity_score}/100
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs t-2">
                       {t("Tệp khách hàng:", "Target audience:")}{" "}
                       <strong className="text-[#1c1917]">{opportunity.target_audience}</strong>
                     </p>
