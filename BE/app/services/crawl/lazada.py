@@ -1,10 +1,11 @@
-"""Lazada scraper - SEA marketplace product and keyword data."""
+"""Lazada scraper - SEA marketplace product and keyword data with dynamic real images."""
 from __future__ import annotations
 
 import asyncio
 import json
 import random
 import re
+import urllib.parse
 from typing import Any, Dict, List, Optional
 import httpx
 
@@ -23,15 +24,53 @@ def _headers() -> Dict[str, str]:
     }
 
 
-async def _fetch_suggestions(query: str) -> List[Dict[str, Any]]:
-    """Fetch live buyer queries for Lazada VN only."""
+async def _fetch_live_images_for_lazada(query: str, limit: int = 15) -> List[str]:
+    """Fetch real-time product photos dynamically from the web."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    }
+    q_str = f"{query} lazada vn product"
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            resp = await client.get(
+                "https://duckduckgo.com/?q=" + urllib.parse.quote(q_str) + "&iax=images&ia=images",
+                headers=headers,
+            )
+            m = re.search(r"vqd=[\x27\x22]?([0-9\-]+)[\x27\x22]?", resp.text)
+            if not m:
+                return []
+            vqd = m.group(1)
+            img_url = (
+                "https://duckduckgo.com/i.js?l=us-en&o=json&q="
+                + urllib.parse.quote(q_str)
+                + "&vqd="
+                + vqd
+                + "&f=,,,&p=1"
+            )
+            i_resp = await client.get(img_url, headers=headers)
+            if i_resp.status_code == 200:
+                results = i_resp.json().get("results", [])
+                images = []
+                for r in results[:limit]:
+                    img = r.get("image")
+                    if img and img.startswith("http") and not img.endswith(".svg"):
+                        images.append(img)
+                return images
+    except Exception:
+        pass
+    return []
+
+
+async def _fetch_suggestions(query: str, limit: int = 30) -> List[Dict[str, Any]]:
+    """Fetch live buyer queries for Lazada VN only with real dynamic images."""
     results = []
-    # 1. Try Google search for Lazada Vietnam only
     queries_to_try = [
         f"lazada vn {query}",
         f"site:lazada.vn {query}",
         f"lazada {query}",
     ]
+    live_images_task = asyncio.create_task(_fetch_live_images_for_lazada(query, limit=limit + 5))
+
     for q_try in queries_to_try:
         try:
             url = f"https://suggestqueries.google.com/complete/search?client=firefox&q={urllib.parse.quote(q_try)}"
@@ -40,7 +79,7 @@ async def _fetch_suggestions(query: str) -> List[Dict[str, Any]]:
                 if resp.status_code == 200:
                     data = resp.json()
                     suggestions = data[1] if len(data) > 1 and isinstance(data[1], list) else []
-                    for idx, item in enumerate(suggestions[:10]):
+                    for idx, item in enumerate(suggestions[:limit]):
                         clean_term = re.sub(r"^(?:lazada(?:\s*vn)?|site:lazada\.vn)\s*", "", str(item), flags=re.I).strip()
                         if not clean_term or len(clean_term) < 3:
                             continue
@@ -65,7 +104,12 @@ async def _fetch_suggestions(query: str) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # 2. If still empty, create standard topic suggestion
+    live_images = []
+    try:
+        live_images = await live_images_task
+    except Exception:
+        pass
+
     if not results:
         results.append({
             "source": "lazada",
@@ -79,8 +123,15 @@ async def _fetch_suggestions(query: str) -> List[Dict[str, Any]]:
             "rating": 4.8,
             "reviews_count": 50,
             "url": f"https://www.lazada.vn/catalog/?q={query.replace(' ', '+')}",
-            "image_url": "",
+            "image_url": live_images[0] if live_images else "",
         })
+
+    for idx, p in enumerate(results):
+        if not p.get("image_url"):
+            if live_images and idx < len(live_images):
+                p["image_url"] = live_images[idx]
+            elif live_images:
+                p["image_url"] = live_images[idx % len(live_images)]
 
     return results
 
@@ -134,9 +185,9 @@ class LazadaCrawler:
         except Exception as e:
             print(f"[lazada] catalog error: {e}")
 
-        # 2. Fallback to live buyer search intent
+        # 2. Fallback to live buyer search intent with real dynamic images
         if not products:
-            products = await _fetch_suggestions(query)
+            products = await _fetch_suggestions(query, limit=limit)
 
         result = {
             "source": "lazada",
@@ -144,5 +195,5 @@ class LazadaCrawler:
             "products": products[:limit],
             "success": len(products) > 0,
         }
-        print(f"[lazada] Got {len(result['products'])} products")
+        print(f"[lazada] Got {len(result['products'])} products with real images")
         return result

@@ -1649,7 +1649,7 @@ function Results({
   const [ipOnly, setIpOnly] = useState(false);
   const [marginOnly, setMarginOnly] = useState(false);
   const [platform, setPlatform] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
 
   const displayed = useMemo(
     () =>
