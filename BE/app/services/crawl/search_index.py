@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import base64
 import re
+import unicodedata
 import urllib.parse
 from typing import Any, Dict, List, Optional
 
@@ -47,6 +48,31 @@ _HEADERS = {
     ),
     "accept-language": "en-US,en;q=0.9,vi;q=0.8",
 }
+
+_CATEGORY_KEYWORDS = (
+    {"tumbler", "mug", "cup", "bottle", "flask", "binh", "coc", "ly"},
+    {"shirt", "tee", "hoodie", "jacket", "sweater", "ao"},
+    {"shoe", "shoes", "sneaker", "boot", "sandal", "giay", "dep"},
+    {"lamp", "light", "mirror", "canvas", "plaque", "den", "guong", "tranh"},
+    {"dog", "cat", "pet", "collar", "leash", "cho", "meo"},
+    {"ornament", "christmas", "halloween", "holiday", "noel"},
+)
+
+
+def _normalized_tokens(value: str) -> set[str]:
+    normalized = unicodedata.normalize("NFKD", value.lower())
+    ascii_value = "".join(char for char in normalized if not unicodedata.combining(char))
+    return {token for token in re.findall(r"[a-z0-9]+", ascii_value) if len(token) > 2}
+
+
+def _is_relevant_listing(query: str, text: str) -> bool:
+    query_tokens = _normalized_tokens(query)
+    text_tokens = _normalized_tokens(text)
+    if not query_tokens:
+        return True
+    if query_tokens & text_tokens:
+        return True
+    return any(query_tokens & group and text_tokens & group for group in _CATEGORY_KEYWORDS)
 
 def _unwrap_result_url(raw_url: str) -> str:
     if raw_url.startswith("//"):
@@ -119,6 +145,8 @@ def parse_indexed_results(
 
         snippet_node = result.select_one(".result__snippet, .b_caption p")
         snippet = snippet_node.get_text(" ", strip=True) if snippet_node else ""
+        if not _is_relevant_listing(query, f"{title} {snippet}"):
+            continue
         indexed_price = _extract_usd_price(f"{title} {snippet}")
         rank = len(products)
         price = indexed_price or round(config["base_price"] + rank * 1.75, 2)

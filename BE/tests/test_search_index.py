@@ -52,3 +52,13 @@ def test_filters_ads_and_wrong_marketplace():
     )
 
     assert parse_indexed_results(html, "etsy", "tumbler") == []
+
+
+def test_filters_irrelevant_listing_from_matching_marketplace():
+    html = _result(
+        "2026 Declaration of Independence Quarter Coin",
+        "https://www.ebay.com/itm/123456789",
+        "Rare collectible coin",
+    )
+
+    assert parse_indexed_results(html, "ebay", "bình giữ nhiệt") == []
