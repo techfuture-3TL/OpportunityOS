@@ -1,0 +1,30 @@
+services:
+  pw1-backend:
+    build: .
+    container_name: pw1-backend
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+    shm_size: '2gb'
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - default
+      - vps_default
+
+networks:
+  default:
+  vps_default:
+    external: true

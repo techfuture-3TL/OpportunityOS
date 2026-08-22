@@ -1,0 +1,176 @@
+[
+  {
+    "signal_id": "SIG-PICKLEBALL-01",
+    "topic": "Personalized Pickleball Gear & Drinkware",
+    "keywords": ["pickleball gifts", "custom pickleball tumbler", "personalized pickleball paddle sign"],
+    "category": "Drinkware",
+    "target_niche": "Sports & Recreation / Active Seniors & Gen Z",
+    "demand_metrics": {
+      "tiktok_shop_sales_growth_pct": 210,
+      "tiktok_views_growth_pct": 340,
+      "amazon_monthly_search_vol": 68000,
+      "etsy_trending_rank": 14,
+      "google_trends_score": 92
+    },
+    "ip_safety": {
+      "safety_score": 98.0,
+      "status": "CLEAN_IP",
+      "notes": "Pickleball is a generic sport name, 100% safe for custom text and club crests."
+    },
+    "virality_metrics": {
+      "virality_score": 92.0,
+      "hook_potential": "HIGH",
+      "visual_wow_factor": "Laser engraving reaction video on TikTok gets instant 500k+ views."
+    },
+    "competitor_analysis": {
+      "avg_market_price": 29.99,
+      "competitor_count": 18,
+      "top_negative_reviews": [
+        "The printed logo on this tumbler peeled off completely after 2 washes in the dishwasher.",
+        "Cheap plastic feel and doesn't keep ice cold during outdoor games in summer sun.",
+        "No option to personalize with custom club names or player nicknames."
+      ],
+      "market_gap_description": "High demand for rugged, high-end double-walled stainless tumblers with permanent laser engraving of player names and club emblems."
+    },
+    "best_fit_sku": "PW-DRINK-TUMB-20OZ"
+  },
+  {
+    "signal_id": "SIG-PET-MEMORIAL-02",
+    "topic": "Vintage LED Acrylic Pet Memorial Light",
+    "keywords": ["pet memorial night light", "custom dog loss gift", "cat memorial photo acrylic"],
+    "category": "Gifts",
+    "target_niche": "Pet Owners / Grief & Memorial Gifts",
+    "demand_metrics": {
+      "tiktok_shop_sales_growth_pct": 145,
+      "tiktok_views_growth_pct": 220,
+      "amazon_monthly_search_vol": 95000,
+      "etsy_trending_rank": 6,
+      "google_trends_score": 88
+    },
+    "ip_safety": {
+      "safety_score": 95.0,
+      "status": "CLEAN_IP",
+      "notes": "Custom user uploaded pet photos with vector line art, zero copyright infringement."
+    },
+    "virality_metrics": {
+      "virality_score": 95.0,
+      "hook_potential": "VERY_HIGH",
+      "visual_wow_factor": "Emotional unboxing reaction video when light turns on with dog's picture."
+    },
+    "competitor_analysis": {
+      "avg_market_price": 31.50,
+      "competitor_count": 42,
+      "top_negative_reviews": [
+        "The photo print quality was very blurry and dark on the acrylic.",
+        "The wooden base was flimsy and USB cable stopped working after 3 days.",
+        "Arrived in damaged generic box, looked very cheap as a condolence gift."
+      ],
+      "market_gap_description": "Need ultra-clear UV photo printing with high contrast vector outline enhancement, solid beechwood base and premium gift packaging."
+    },
+    "best_fit_sku": "PW-GIFT-ACRYLIC-LIGHT"
+  },
+  {
+    "signal_id": "SIG-STREETWEAR-03",
+    "topic": "Retro Japanese Cyberpunk Heavyweight Streetwear Tee",
+    "keywords": ["japanese aesthetic tee", "vintage anime graphic shirt", "oversized streetwear heavy tee"],
+    "category": "Apparel",
+    "target_niche": "Gen Z Fashion / Streetwear & Anime Culture",
+    "demand_metrics": {
+      "tiktok_shop_sales_growth_pct": 180,
+      "tiktok_views_growth_pct": 490,
+      "amazon_monthly_search_vol": 115000,
+      "etsy_trending_rank": 22,
+      "google_trends_score": 96
+    },
+    "ip_safety": {
+      "safety_score": 88.0,
+      "status": "ORIGINAL_ART_REQUIRED",
+      "notes": "Must use original cyberpunk/anime artwork to avoid licensed anime trademarks."
+    },
+    "virality_metrics": {
+      "virality_score": 89.0,
+      "hook_potential": "HIGH",
+      "visual_wow_factor": "OOTD try-on haul aesthetic video with vintage wash close-up."
+    },
+    "competitor_analysis": {
+      "avg_market_price": 34.99,
+      "competitor_count": 65,
+      "top_negative_reviews": [
+        "The shirt is paper thin and shrank 2 sizes after washing. Not a real heavyweight boxy fit.",
+        "The DTG print feels like thick sticky plastic on my chest and cracked quickly.",
+        "Colors are washed out compared to TikTok video mockup."
+      ],
+      "market_gap_description": "Huge demand for true 240+ GSM garment-dyed vintage wash tees with breathable high-res DTG printing that won't crack or feel sticky."
+    },
+    "best_fit_sku": "PW-APP-TEE-HEAVY"
+  },
+  {
+    "signal_id": "SIG-DOG-COLLAR-04",
+    "topic": "Personalized Tactical Leather Dog Collar with Laser Plate",
+    "keywords": ["custom leather dog collar", "engraved metal nameplate pet collar", "rugged dog collar"],
+    "category": "Pet_Accessories",
+    "target_niche": "Dog Lovers / Large & Hunting Dog Owners",
+    "demand_metrics": {
+      "tiktok_shop_sales_growth_pct": 160,
+      "tiktok_views_growth_pct": 280,
+      "amazon_monthly_search_vol": 54000,
+      "etsy_trending_rank": 11,
+      "google_trends_score": 84
+    },
+    "ip_safety": {
+      "safety_score": 99.0,
+      "status": "CLEAN_IP",
+      "notes": "Utilitarian pet product, zero trademark risk."
+    },
+    "virality_metrics": {
+      "virality_score": 86.0,
+      "hook_potential": "MEDIUM_HIGH",
+      "visual_wow_factor": "Durability pull-test video with big dogs proving strength."
+    },
+    "competitor_analysis": {
+      "avg_market_price": 26.99,
+      "competitor_count": 25,
+      "top_negative_reviews": [
+        "The fake PU leather snapped when my German Shepherd pulled on leash.",
+        "The printed text on the tag rubbed off in rainy weather.",
+        "D-ring was cheap metal and bent easily."
+      ],
+      "market_gap_description": "Need genuine thick saddle leather with heavy-duty solid brass hardware and deep laser etched metal plate."
+    },
+    "best_fit_sku": "PW-PET-LEATHER-COLLAR"
+  },
+  {
+    "signal_id": "SIG-WOOD-SIGN-05",
+    "topic": "Personalized Family Name Rustic Walnut Wood Plaque",
+    "keywords": ["family name wood sign", "rustic housewarming wood plaque", "custom established sign"],
+    "category": "Home_Decor",
+    "target_niche": "Homeowners / Housewarming & Wedding Gifts",
+    "demand_metrics": {
+      "tiktok_shop_sales_growth_pct": 120,
+      "tiktok_views_growth_pct": 190,
+      "amazon_monthly_search_vol": 82000,
+      "etsy_trending_rank": 9,
+      "google_trends_score": 86
+    },
+    "ip_safety": {
+      "safety_score": 100.0,
+      "status": "CLEAN_IP",
+      "notes": "Classic typography established sign, 100% clean."
+    },
+    "virality_metrics": {
+      "virality_score": 88.0,
+      "hook_potential": "HIGH",
+      "visual_wow_factor": "Satisfying laser engraving timelapse peeling off protective film."
+    },
+    "competitor_analysis": {
+      "avg_market_price": 36.99,
+      "competitor_count": 30,
+      "top_negative_reviews": [
+        "Scent of cheap plywood was overwhelming, looked like particle board with vinyl sticker.",
+        "Laser engraving was very shallow and barely visible in dim lighting."
+      ],
+      "market_gap_description": "Demand for real solid walnut wood slice with deep high-contrast 3D laser engraving and natural wood grain finish."
+    },
+    "best_fit_sku": "PW-HOME-WOOD-PLAQUE"
+  }
+]
