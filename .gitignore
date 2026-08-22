@@ -32,3 +32,5 @@ BE/data/*.har
 .DS_Store
 Thumbs.db
 *.log
+.vercel
+.env*
