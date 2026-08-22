@@ -60,25 +60,26 @@ Trong đó, $P_i \in [0, 100]$ là điểm chuẩn hóa của từng trụ cột
 #### 1. Trụ Cột Nhu Cầu & Tăng Trưởng ($P_1$ - Trọng số: 25%)
 * **Định nghĩa**: Đo lường sức mua thực tế và độ nóng của từ khóa trên cả 6 sàn TMĐT.
 * **Công thức**:
-  $$P_1 = \min\left(100, 30 \cdot \log_{10}(V_{search} + 1) + 0.4 \cdot \Delta S_{growth} + 0.3 \cdot Q_{sold}\right)$$
+  $$P_1 = \min\left(100, \, 30 \cdot \log_{10}(V_{\text{search}} + 1) + 0.4 \cdot \Delta S_{\text{growth}} + 0.3 \cdot Q_{\text{sold}}\right)$$
 * **Ý nghĩa thực chiến**: Đảm bảo sản phẩm có dòng người mua thực tế, không bị "đu đỉnh trend ảo".
 
 #### 2. Trụ Cột Biên Lãi & Đệm Lợi Nhuận Gộp ($P_2$ - Trọng số: 20%)
 * **Định nghĩa**: Tính toán đệm lợi nhuận để seller có đủ biên độ chi trả chi phí quảng cáo (Facebook Ads, TikTok Ads, Etsy Ads).
 * **Công thức**:
-  $$\text{Margin \%} = \frac{P_{retail} - \text{COGS}_{Printway} - \text{Fee}_{platform}}{P_{retail}} \times 100\%$$
-  $$P_2 = \begin{cases} 95 + \text{bonus} & \text{khi Margin } \ge 65\% \text{ và Net Profit } \ge \$12 \\ 75 \to 90 & \text{khi Margin } 50\% - 64\% \\ 30 \to 50 & \text{khi Margin } < 40\% \end{cases}$$
+  $$\text{Margin} = \frac{P_{\text{retail}} - \text{COGS}_{\text{Printway}} - \text{Fee}_{\text{platform}}}{P_{\text{retail}}} \times 100$$
+
+  $$P_2 = \begin{cases} 95 + \text{Bonus} & \text{khi Margin } \ge 65\% \text{ và Net Profit } \ge 12\text{ USD} \\ 75 \to 90 & \text{khi Margin } 50\% - 64\% \\ 30 \to 50 & \text{khi Margin } < 40\% \end{cases}$$
 
 #### 3. Trụ Cột Khả Thi Chuỗi Cung Printway ($P_3$ - Trọng số: 15%)
 * **Định nghĩa**: Kiểm tra độ sẵn sàng của phôi xưởng Printway, vật liệu gia công và cam kết **SLA 48h**.
 * **Công thức**:
-  $$P_3 = \text{MatchScore}(\text{Catalog}_{Printway}) \times 0.6 + \text{SLA\_Score}(48h) \times 0.4$$
+  $$P_3 = \text{MatchScore}(\text{Catalog}_{\text{Printway}}) \times 0.6 + \text{SLAScore}(48\text{h}) \times 0.4$$
 * **Tiêu chuẩn**: SLA sản xuất tiêu chuẩn **48 giờ** giúp seller đạt chỉ số vận chuyển xuất sắc trên TikTok Shop & Amazon.
 
 #### 4. Trụ Cột Mức Độ Cạnh Tranh ($P_4$ - Trọng số: 15%)
 * **Định nghĩa**: Đánh giá số lượng đối thủ cạnh tranh trực tiếp cùng ngách và điểm xếp hạng trung bình.
 * **Công thức**:
-  $$P_4 = 100 - \min(70, N_{competitors} \times 3.5) + \text{ReviewPenalty}$$
+  $$P_4 = 100 - \min(70, \, N_{\text{competitors}} \times 3.5) + \text{ReviewPenalty}$$
 
 #### 5. Trụ Cột Lá Chắn Bản Quyền Clean IP ($P_5$ - Trọng số: 15%)
 * **Định nghĩa**: Kiểm tra đối soát 3 tầng đối với từ khóa thương hiệu, danh mục nhãn hiệu đăng ký (USPTO Class 025, 021, 028) và WIPO.
