@@ -41,6 +41,13 @@ function guessCategory(title: string): string {
   return 'Gifts'
 }
 
+function resolveCategory(rawCategory: string | undefined, title: string): string {
+  if (!rawCategory || rawCategory === 'General' || rawCategory === 'Other') {
+    return guessCategory(title)
+  }
+  return rawCategory
+}
+
 function resolveProductImage(title: string, category: string, rawImg?: string): string {
   if (rawImg && (rawImg.startsWith('http://') || rawImg.startsWith('https://'))) {
     return rawImg
@@ -192,7 +199,7 @@ export const analyzeOpportunities = async (payload: AnalyzeOpportunitiesPayload)
         const base = s.base_cost || 8.5
         const suggested = s.suggested_price || 24.99
         const profit = +(s.unit_economics?.net_unit_profit || suggested - base).toFixed(2)
-        const cat = s.category || guessCategory(title)
+        const cat = resolveCategory(s.category, title)
         const prodImg = s.image_url || s.img_url || resolveProductImage(title, cat)
         const scoreBreakdown = normalizeScoreBreakdown(s.score_breakdown)
 
@@ -292,7 +299,7 @@ export const analyzeOpportunities = async (payload: AnalyzeOpportunitiesPayload)
     const base = s.base_cost || 8.5
     const suggested = s.suggested_price || 24.99
     const profit = +(s.unit_economics?.net_unit_profit || suggested - base).toFixed(2)
-    const cat = s.category || guessCategory(title)
+    const cat = resolveCategory(s.category, title)
     const prodImg = s.image_url || s.img_url || resolveProductImage(title, cat)
     const scoreBreakdown = normalizeScoreBreakdown(s.score_breakdown)
 

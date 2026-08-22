@@ -161,14 +161,14 @@ class CrawlService:
     def _guess_category(self, title: str) -> str:
         """Guess category from product title."""
         t = title.lower()
-        if any(k in t for k in ["tumbler", "mug", "cup", "bottle", "water"]):
+        if any(k in t for k in ["tumbler", "mug", "cup", "bottle", "water", "bình", "binh", "ly", "cốc", "coc", "flask"]):
             return "Drinkware"
-        if any(k in t for k in ["shirt", "tee", "hoodie", "jacket"]):
+        if any(k in t for k in ["shirt", "tee", "hoodie", "jacket", "áo", "ao"]):
             return "Apparel"
-        if any(k in t for k in ["light", "lamp", "mirror", "sign", "canvas", "plaque"]):
+        if any(k in t for k in ["light", "lamp", "mirror", "sign", "canvas", "plaque", "đèn", "den", "gương", "guong"]):
             return "Home Decor"
-        if any(k in t for k in ["dog", "cat", "pet", "collar", "leash"]):
+        if any(k in t for k in ["dog", "cat", "pet", "collar", "leash", "chó", "cho", "mèo", "meo"]):
             return "Pet"
-        if any(k in t for k in ["ornament", "christmas", "holiday", "gift"]):
+        if any(k in t for k in ["ornament", "christmas", "holiday", "gift", "noel", "quà", "qua"]):
             return "Seasonal"
         return "General"
