@@ -12,7 +12,7 @@ export interface AnalysisHistoryItem {
 }
 
 import { PW_HOT_KEYWORDS, type HotKeywordItem } from "./data/pwKeywords";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -367,18 +367,25 @@ function Sidebar({ collapsed, onToggleCollapse, filters, setFilters, screen, set
           </div>
         </SideSection>
         <SideSection title={t("Nguồn dữ liệu", "Data sources")}>
-          <div className="rounded-xl border border-[var(--emerald-border)] bg-[var(--emerald-soft)] p-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-[var(--emerald)]"><Zap className="h-4 w-4" />{t("Auto crawl full 6 sàn", "Auto-crawl all 6 platforms")}</div>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--emerald)]/80">{t("Hệ thống tự động quét toàn bộ 6 sàn TMĐT cho từ khóa của bạn — không cần chọn thủ công.", "The system automatically crawls all 6 marketplaces for your keyword — no manual selection needed.")}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">{marketList.map((mkt) => (<span key={mkt.id} className="inline-flex items-center gap-1 rounded-full border border-[var(--emerald-border)] bg-white px-2.5 py-1 text-xs font-bold text-[var(--emerald)]"><mkt.icon className="h-3 w-3" />{mkt.label}</span>))}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {marketList.map((mkt) => (
+              <div key={mkt.id} className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-2.5 py-2">
+                <mkt.icon className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+                <span className="truncate text-[11px] font-bold text-[var(--text-1)]">{mkt.label}</span>
+                <i className="pulse-dot ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+              </div>
+            ))}
           </div>
+          <p className="mt-2.5 flex items-start gap-1.5 text-[10.5px] leading-relaxed text-[var(--text-3)]">
+            <Zap className="mt-0.5 h-3 w-3 shrink-0 text-[var(--accent)]" />
+            {t("Tự động quét toàn bộ 6 sàn cho từ khóa của bạn — không cần chọn thủ công.", "Auto-crawls all 6 platforms for your keyword — no manual selection needed.")}
+          </p>
         </SideSection>
         <SideSection title={t("Kho phôi (Fulfillment)", "Blank warehouse")}>
-          <select value={filters.warehouse} onChange={(e) => update("warehouse", e.target.value)} className="select">{t("Kho US — giao 2–5 ngày", "US warehouse — 2–5 day delivery")}<option value="US">{t("Kho US — giao 2–5 ngày", "US warehouse — 2–5 day delivery")}</option><option value="VN">{t("Kho Việt Nam — xưởng gốc", "Vietnam — factory")}</option><option value="EU">{t("Kho Châu Âu — EU Hub", "EU hub")}</option></select>
+          <select value={filters.warehouse} onChange={(e) => update("warehouse", e.target.value)} className="select"><option value="US">{t("Kho US — giao 2–5 ngày", "US warehouse — 2–5 day delivery")}</option><option value="VN">{t("Kho Việt Nam — xưởng gốc", "Vietnam — factory")}</option><option value="EU">{t("Kho Châu Âu — EU Hub", "EU hub")}</option></select>
         </SideSection>
         <SideSection title={t("Kinh tế đơn vị", "Unit economics")}>
-          <div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold text-[var(--text-2)]">{t("Biên lợi nhuận gộp", "Gross margin")}</span><span className="font-mono text-base font-bold text-[var(--accent)]">{filters.margin}%</span></div>
-          <input type="range" min="20" max="80" value={filters.margin} onChange={(e) => update("margin", Number(e.target.value))} className="range" style={{ background: `linear-gradient(90deg, var(--accent) 0%, var(--accent) ${((filters.margin - 20) / 60) * 100}%, var(--panel-3) ${((filters.margin - 20) / 60) * 100}%)` }} />
+          <Slider label={t("Biên lợi nhuận gộp", "Gross margin")} value={filters.margin} min={20} max={80} suffix="%" onChange={(v) => update("margin", v)} />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div><label className="field-label !text-[9px]">{t("Trần COGS ($)", "COGS cap ($)")}</label><input type="number" value={filters.cogs} onChange={(e) => update("cogs", Number(e.target.value) || 15)} className="input !px-3 !py-2.5 !text-sm !font-bold" /></div>
             <div><label className="field-label !text-[9px]">{t("Giá min ($)", "Min price ($)")}</label><input type="number" value={filters.priceMin} onChange={(e) => update("priceMin", Number(e.target.value) || 20)} className="input !px-3 !py-2.5 !text-sm !font-bold" /></div>
@@ -597,7 +604,7 @@ function GoalsSetup({ filters, setFilters, onBack, onNext }: { filters: typeof i
           <div className="mt-5 space-y-5">
             <div><label className="field-label flex items-center gap-2"><Wallet className="h-4 w-4 text-[var(--accent)]" />{t("Ngân sách quảng cáo dự kiến ($)", "Planned ad budget ($)")}</label><input type="number" value={budget} onChange={(e) => setBudget(Number(e.target.value) || 0)} className="input mt-2" placeholder="500, 1000, 5000…" /></div>
             <div><label className="field-label">{t("Giá vốn phôi tối đa ($)", "Max blank cost ($)")}</label><input type="number" value={filters.cogs} onChange={(e) => setFilters((c) => ({ ...c, cogs: Number(e.target.value) || 15 }))} className="input mt-2" placeholder="15" /></div>
-            <div><div className="mb-3 flex items-center justify-between"><label className="field-label !mb-0">{t("Biên lãi gộp tối thiểu", "Min gross margin")}</label><span className="font-mono text-lg font-bold text-[var(--accent)]">{filters.margin}%</span></div><input type="range" min="20" max="80" value={filters.margin} onChange={(e) => setFilters((c) => ({ ...c, margin: Number(e.target.value) }))} className="range" style={{ background: `linear-gradient(90deg, var(--accent) 0%, var(--accent) ${((filters.margin - 20) / 60) * 100}%, var(--panel-3) ${((filters.margin - 20) / 60) * 100}%)` }} /></div>
+            <div><Slider label={t("Biên lãi gộp tối thiểu", "Min gross margin")} value={filters.margin} min={20} max={80} suffix="%" onChange={(v) => setFilters((c) => ({ ...c, margin: v }))} /></div>
           </div>
         </div>
       </div>
@@ -662,9 +669,59 @@ function Select({ label, value, onChange, options }: { label: string; value: str
   return (<div><label className="field-label">{label}</label><select value={value} onChange={(event) => onChange(event.target.value)} className="select mt-2">{options.map(([id, name]) => (<option key={id} value={id}>{name}</option>))}</select></div>);
 }
 
+function Slider({ value, min, max, step = 1, suffix = "", label, onChange }: { value: number; min: number; max: number; step?: number; suffix?: string; label?: string; onChange: (value: number) => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pct = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+  const updateFromX = (clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const snapped = Math.round((min + ratio * (max - min)) / step) * step;
+    onChange(Math.min(max, Math.max(min, snapped)));
+  };
+  return (
+    <div>
+      {label !== undefined && (
+        <div className="mb-3 flex items-center justify-between">
+          <span className="field-label !mb-0">{label}</span>
+          <span className="font-mono text-base font-bold text-[var(--accent)]">{value}{suffix}</span>
+        </div>
+      )}
+      <div
+        ref={trackRef}
+        role="slider"
+        tabIndex={0}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        className="relative h-2.5 w-full cursor-pointer touch-none select-none rounded-full bg-[var(--panel-3)]"
+        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); updateFromX(e.clientX); }}
+        onPointerMove={(e) => { if (e.buttons === 1) updateFromX(e.clientX); }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft" || e.key === "ArrowDown") onChange(Math.max(min, value - step));
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") onChange(Math.min(max, value + step));
+        }}
+      >
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 rounded-full"
+          style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--accent-dark))" }}
+        />
+        <div
+          className="pointer-events-none absolute top-1/2 h-[20px] w-[20px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[var(--accent)] bg-white shadow-[0_2px_6px_rgba(183,39,39,0.3)]"
+          style={{ left: `${pct}%` }}
+        />
+      </div>
+      <div className="mt-1.5 flex justify-between font-mono text-[9.5px] font-semibold text-[var(--text-3)]">
+        <span>{min}{suffix}</span>
+        <span>{max}{suffix}</span>
+      </div>
+    </div>
+  );
+}
+
 function Range({ label, value, min, max, suffix, onChange }: { label: string; value: number; min: number; max: number; suffix: string; onChange: (value: number) => void }) {
-  const pct = ((value - min) / (max - min)) * 100;
-  return (<div><div className="mb-3 flex items-center justify-between"><label className="field-label !mb-0">{label}</label><strong className="font-mono text-base text-[var(--accent)]">{value}{suffix}</strong></div><input className="range" type="range" min={min} max={max} step="5" value={value} onChange={(event) => onChange(Number(event.target.value))} style={{ background: `linear-gradient(90deg, var(--accent) 0%, var(--accent) ${pct}%, var(--panel-3) ${pct}%)` }} /></div>);
+  return <Slider label={label} value={value} min={min} max={max} step={5} suffix={suffix} onChange={onChange} />;
 }
 
 function NumberInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
@@ -843,15 +900,178 @@ function PillarsInteractive({ opportunity }: { opportunity: Opportunity }) {
    RESULTS TABLE
    ═══════════════════════════════════════════════════════════════════════════════ */
 function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen: (opportunity: Opportunity) => void; emptyText: string }) {
-  const { t, lang } = useI18n();
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const { t } = useI18n();
+  const [expanded, setExpanded] = useState<string | null>(rows[0]?.id || null);
 
   return (
-    <div className="card overflow-hidden animate-fade-up">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-sm">
-          <thead><tr className="border-b border-[var(--border)] bg-[var(--panel-2)] text-left text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-3)]"><th className="w-14 px-5 py-4">#</th><th className="px-5 py-4">{t("Sản phẩm & ngách", "Product & niche")}</th><th className="hidden px-5 py-4 md:table-cell">{t("Nguồn dữ liệu", "Data sources")}</th><th className="px-5 py-4">{t("Điểm", "Score")}</th><th className="hidden px-5 py-4 sm:table-cell">{t("Biên lãi", "Margin")}</th><th className="hidden px-5 py-4 sm:table-cell">{t("Lãi/sp", "Profit/unit")}</th><th className="hidden px-5 py-4 lg:table-cell">{t("Giá bán", "Price")}</th><th className="hidden px-5 py-4 md:table-cell">{t("Bản quyền", "IP")}</th><th className="w-14 px-5 py-4" /></tr></thead>
-          <tbody>{rows.map((opp, index) => { const isCleanIp = opp.ip_safety_status.includes("CLEAN") || opp.ip_safety_status.toLowerCase().includes("sạch"); const isOpen = expanded === opp.id; return (<Fragment key={opp.id}><tr className={cn("cursor-pointer border-t border-[var(--border)] transition hover:bg-[var(--panel-2)]", isOpen && "bg-[var(--panel-2)]")} onClick={() => setExpanded(isOpen ? null : opp.id)}><td className="px-5 py-4"><span className={cn("grid h-8 w-8 place-items-center rounded-lg font-mono text-sm font-bold", index === 0 ? "rank-1" : index === 1 ? "rank-2" : index === 2 ? "rank-3" : "rank-n")}>{index === 0 ? <Crown className="h-4 w-4" /> : index + 1}</span></td><td className="max-w-[340px] px-5 py-4"><div className="flex items-center gap-4">{(opp as any).image_url && <img src={(opp as any).image_url} alt={opp.name} className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border)] object-cover" loading="lazy" />}<div className="min-w-0 flex-1"><strong className="block truncate text-base font-bold text-[var(--text-1)]">{opp.name}</strong><span className="block truncate text-sm text-[var(--text-3)]">{opp.target_niche}</span><span className="badge badge-red mt-1.5 !text-[10px]">{categoryName(opp.category)}</span></div></div></td><td className="hidden px-5 py-4 md:table-cell"><div className="flex flex-wrap gap-1.5">{(opp.marketplace_sources ?? []).slice(0, 3).map((source) => (<span key={source} className="badge badge-sky !text-[10px]">{source}</span>))}</div></td><td className="px-5 py-4"><div className="flex items-center gap-3"><span className="font-mono text-lg font-bold text-[var(--text-1)]">{opp.opportunity_score}</span><div className="h-2 w-16 rounded-full bg-[var(--panel-3)]"><div className="h-2 rounded-full bg-[var(--accent)]" style={{ width: `${Math.min(opp.opportunity_score, 100)}%` }} /></div></div></td><td className="hidden px-5 py-4 font-mono text-sm font-bold text-[var(--text-1)] sm:table-cell">{opp.profit_margin_pct}%</td><td className="hidden px-5 py-4 font-mono text-sm font-bold text-[var(--emerald)] sm:table-cell">+{money(opp.profit_per_unit)}</td><td className="hidden px-5 py-4 font-mono text-sm text-[var(--text-2)] lg:table-cell">{money(opp.suggested_price)}</td><td className="hidden px-5 py-4 md:table-cell"><span className={cn("badge", isCleanIp ? "badge-emerald" : "badge-amber")}>{isCleanIp ? t("Clean IP", "Clean IP") : t("Cần duyệt", "Review")}</span></td><td className="px-5 py-4"><ChevronDown className={cn("h-5 w-5 text-[var(--text-3)] transition-transform", isOpen && "rotate-180")} /></td></tr>{isOpen && (<tr className="border-t border-[var(--border)]"><td colSpan={9} className="bg-[var(--panel-2)] px-6 py-6"><div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]"><div className="space-y-5"><UnitEconomicsBox opportunity={opp} /><div className="card p-5"><h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[var(--accent)]"><Quote className="h-4 w-4" />{t("Nỗi đau khách hàng được giải quyết", "Customer pain point solved")}</h4><p className="mt-3 text-sm leading-relaxed text-[var(--text-2)]">{opp.key_pain_point_solved}</p><div className="mt-4 space-y-2">{opp.negative_reviews_summary.slice(0, 3).map((review, i) => (<blockquote key={i} className="quote-block text-sm leading-relaxed text-[var(--text-2)]">{review}</blockquote>))}</div></div></div><ScoringDetailPanel opportunity={opp} preset="VIRAL_TREND" /></div><div className="mt-5"><PriceChartCard opportunity={opp} /></div><div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-5"><span className="flex items-center gap-2 text-sm text-[var(--text-2)]"><Flame className="h-4 w-4 text-[var(--accent)]" />{opp.trend_velocity}</span><div className="flex gap-3"><span className="btn-soft !cursor-default"><Factory className="h-4 w-4" />{opp.matched_sku}</span><button onClick={() => onOpen(opp)} className="btn-primary !px-6 !py-2.5 !text-sm">{t("Xem Brief & chiến lược marketing", "View brief & marketing strategy")}<ArrowRight className="h-4 w-4" /></button></div></div></td></tr>)}</Fragment>); })}{!rows.length && (<tr><td colSpan={9} className="px-5 py-16 text-center text-sm text-[var(--text-2)]">{emptyText}</td></tr>)}</tbody>
+    <div className="card overflow-hidden">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border)] bg-[var(--panel-2)] text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-3)]">
+              <th className="w-14 px-4 py-3.5 text-center">#</th>
+              <th className="px-4 py-3.5">{t("Sản phẩm & Ngách", "Product & Niche")}</th>
+              <th className="w-28 px-4 py-3.5 text-center">{t("Nguồn", "Source")}</th>
+              <th className="w-32 px-4 py-3.5">{t("Điểm", "Score")}</th>
+              <th className="w-24 px-4 py-3.5 text-right">{t("Biên lãi", "Margin")}</th>
+              <th className="w-24 px-4 py-3.5 text-right">{t("Lãi/sp", "Profit/unit")}</th>
+              <th className="w-24 px-4 py-3.5 text-right">{t("Giá bán", "Price")}</th>
+              <th className="w-28 px-4 py-3.5 text-center">{t("Bản quyền", "IP Status")}</th>
+              <th className="w-12 px-4 py-3.5 text-center"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {rows.map((opp, index) => {
+              const isCleanIp = opp.ip_safety_status.includes("CLEAN") || opp.ip_safety_status.toLowerCase().includes("sạch");
+              const isOpen = expanded === opp.id;
+              return (
+                <Fragment key={opp.id}>
+                  <tr
+                    className={cn(
+                      "cursor-pointer transition hover:bg-[var(--panel-2)]",
+                      isOpen && "bg-[var(--panel-2)]/60"
+                    )}
+                    onClick={() => setExpanded(isOpen ? null : opp.id)}
+                  >
+                    <td className="px-4 py-4 text-center">
+                      <span className={cn(
+                        "inline-grid h-8 w-8 place-items-center rounded-lg font-mono text-xs font-bold",
+                        index === 0 ? "rank-1" : index === 1 ? "rank-2" : index === 2 ? "rank-3" : "rank-n"
+                      )}>
+                        {index === 0 ? <Crown className="h-4 w-4" /> : index + 1}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        {(opp as any).image_url ? (
+                          <img
+                            src={(opp as any).image_url}
+                            alt={opp.name}
+                            className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border)] object-cover shadow-sm"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[var(--panel-2)] text-xs font-bold text-[var(--text-3)]">
+                            POD
+                          </div>
+                        )}
+                        <div className="min-w-0 max-w-[320px]">
+                          <strong className="block truncate text-sm font-bold text-[var(--text-1)]">
+                            {opp.name}
+                          </strong>
+                          <span className="block truncate text-xs text-[var(--text-3)]">
+                            {opp.target_niche}
+                          </span>
+                          <span className="badge badge-red mt-1 !text-[10px]">
+                            {categoryName(opp.category)}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex flex-wrap justify-center gap-1">
+                        {(opp.marketplace_sources ?? []).slice(0, 1).map((source) => (
+                          <span key={source} className="badge badge-sky !text-[10px]">
+                            {source}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-[var(--text-1)]">
+                          {opp.opportunity_score}
+                        </span>
+                        <div className="h-2 w-16 overflow-hidden rounded-full bg-[var(--panel-3)]">
+                          <div
+                            className="h-2 rounded-full bg-[var(--accent)]"
+                            style={{ width: `${Math.min(opp.opportunity_score, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono text-sm font-bold text-[var(--text-1)]">
+                      {opp.profit_margin_pct}%
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono text-sm font-bold text-[var(--emerald)]">
+                      +{money(opp.profit_per_unit)}
+                    </td>
+                    <td className="px-4 py-4 text-right font-mono text-sm text-[var(--text-2)]">
+                      {money(opp.suggested_price)}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className={cn("badge !text-[10px]", isCleanIp ? "badge-emerald" : "badge-amber")}>
+                        {isCleanIp ? t("Clean IP", "Clean IP") : t("Cần duyệt", "Review")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <ChevronDown className={cn("h-4 w-4 text-[var(--text-3)] transition-transform", isOpen && "rotate-180")} />
+                    </td>
+                  </tr>
+
+                  {isOpen && (
+                    <tr className="border-t border-[var(--border)] bg-[var(--panel-2)]/40">
+                      <td colSpan={9} className="p-6">
+                        <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
+                          <div className="space-y-5">
+                            <UnitEconomicsBox opportunity={opp} />
+                            <div className="card p-5">
+                              <h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[var(--accent)]">
+                                <Quote className="h-4 w-4" />
+                                {t("Nỗi đau khách hàng được giải quyết", "Customer pain point solved")}
+                              </h4>
+                              <p className="mt-3 text-sm leading-relaxed text-[var(--text-2)]">
+                                {opp.key_pain_point_solved}
+                              </p>
+                              {opp.negative_reviews_summary && opp.negative_reviews_summary.length > 0 && (
+                                <div className="mt-4 space-y-2">
+                                  {opp.negative_reviews_summary.slice(0, 3).map((review, i) => (
+                                    <blockquote key={i} className="quote-block text-sm leading-relaxed text-[var(--text-2)]">
+                                      {review}
+                                    </blockquote>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <ScoringDetailPanel opportunity={opp} preset="VIRAL_TREND" />
+                        </div>
+                        <div className="mt-5">
+                          <PriceChartCard opportunity={opp} />
+                        </div>
+                        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-5">
+                          <span className="flex items-center gap-2 text-sm text-[var(--text-2)]">
+                            <Flame className="h-4 w-4 text-[var(--accent)]" />
+                            {opp.trend_velocity}
+                          </span>
+                          <div className="flex gap-3">
+                            <span className="btn-soft !cursor-default">
+                              <Factory className="h-4 w-4" />
+                              {opp.matched_sku}
+                            </span>
+                            <button
+                              onClick={() => onOpen(opp)}
+                              className="btn-primary !px-6 !py-2.5 !text-sm"
+                            >
+                              {t("Xem Brief & chiến lược marketing", "View brief & marketing strategy")}
+                              <ArrowRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+            {!rows.length && (
+              <tr>
+                <td colSpan={9} className="px-4 py-16 text-center text-sm text-[var(--text-2)]">
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
       </div>
     </div>
