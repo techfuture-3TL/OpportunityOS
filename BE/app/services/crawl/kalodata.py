@@ -1,4 +1,4 @@
-"""Kalodata & Real-time TikTok Shop crawler with concurrent live product image extraction."""
+"""Kalodata & Real-time TikTok Shop crawler with robust multi-source live product image extraction."""
 from __future__ import annotations
 
 import asyncio
@@ -21,45 +21,57 @@ _USER_AGENTS = [
 ]
 
 
-async def _fetch_live_images_for_tiktok(query: str, limit: int = 15) -> List[str]:
-    """Fetch real-time product photos dynamically from the web."""
+async def _fetch_live_images_for_tiktok(query: str, limit: int = 20) -> List[str]:
+    """Fetch real-time product photos dynamically from multi-source search engines."""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "User-Agent": random.choice(_USER_AGENTS),
     }
-    q_str = f"{query} tiktok shop product"
-    try:
-        async with httpx.AsyncClient(timeout=6.0) as client:
-            resp = await client.get(
-                "https://duckduckgo.com/?q=" + urllib.parse.quote(q_str) + "&iax=images&ia=images",
-                headers=headers,
-            )
-            m = re.search(r"vqd=[\x27\x22]?([0-9\-]+)[\x27\x22]?", resp.text)
-            if not m:
-                return []
-            vqd = m.group(1)
-            img_url = (
-                "https://duckduckgo.com/i.js?l=us-en&o=json&q="
-                + urllib.parse.quote(q_str)
-                + "&vqd="
-                + vqd
-                + "&f=,,,&p=1"
-            )
-            i_resp = await client.get(img_url, headers=headers)
-            if i_resp.status_code == 200:
-                results = i_resp.json().get("results", [])
-                images = []
-                for r in results[:limit]:
-                    img = r.get("image")
-                    if img and img.startswith("http") and not img.endswith(".svg"):
-                        images.append(img)
-                return images
-    except Exception:
-        pass
-    return []
+    images = []
+
+    # 1. Primary: DuckDuckGo image search
+    for q_try in [f"{query} tiktok shop product", f"{query} product photo e-commerce", f"{query} personalized"]:
+        try:
+            url = f"https://duckduckgo.com/?q={urllib.parse.quote(q_try)}&iax=images&ia=images"
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(url, headers=headers)
+                m = re.search(r"vqd=[\x27\x22]?([0-9\-]+)[\x27\x22]?", resp.text)
+                if m:
+                    vqd = m.group(1)
+                    i_url = f"https://duckduckgo.com/i.js?l=us-en&o=json&q={urllib.parse.quote(q_try)}&vqd={vqd}&f=,,,&p=1"
+                    i_resp = await client.get(i_url, headers=headers)
+                    if i_resp.status_code == 200:
+                        for item in i_resp.json().get("results", []):
+                            img = item.get("image")
+                            if img and img.startswith("http") and not img.endswith(".svg") and img not in images:
+                                images.append(img)
+                                if len(images) >= limit:
+                                    break
+        except Exception:
+            pass
+        if len(images) >= limit:
+            break
+
+    # 2. Secondary fallback: Bing Image Scraper
+    if len(images) < limit:
+        try:
+            q_bing = query + " product photo"
+            bing_url = "https://www.bing.com/images/search?q=" + urllib.parse.quote(q_bing) + "&FORM=HDRSC2"
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(bing_url, headers=headers)
+                found = re.findall(r"murl&quot;:&quot;(https?://[^&]+?\.(?:jpg|jpeg|png|webp))", resp.text)
+                for f in found:
+                    if f not in images:
+                        images.append(f)
+                        if len(images) >= limit:
+                            break
+        except Exception:
+            pass
+
+    return images
 
 
 async def _fetch_tiktok_live_buyer_signals(query: str, limit: int = 30) -> List[Dict[str, Any]]:
-    """Fetch real-time viral search queries for TikTok Shop with live dynamic images."""
+    """Fetch real-time viral search queries for TikTok Shop with guaranteed live dynamic images."""
     results = []
     queries_to_try = [
         f"{query} tiktok viral",
@@ -67,7 +79,7 @@ async def _fetch_tiktok_live_buyer_signals(query: str, limit: int = 30) -> List[
         query,
     ]
     seen_terms = set()
-    live_images_task = asyncio.create_task(_fetch_live_images_for_tiktok(query, limit=limit + 5))
+    live_images_task = asyncio.create_task(_fetch_live_images_for_tiktok(query, limit=limit + 10))
 
     for q_try in queries_to_try:
         try:
@@ -109,17 +121,16 @@ async def _fetch_tiktok_live_buyer_signals(query: str, limit: int = 30) -> List[
     except Exception:
         pass
 
+    # Ensure EVERY single TikTok product receives a valid product photo
     for idx, p in enumerate(results):
-        if live_images and idx < len(live_images):
-            p["image_url"] = live_images[idx]
-        elif live_images:
+        if live_images:
             p["image_url"] = live_images[idx % len(live_images)]
 
     return results
 
 
 class KalodataCrawler:
-    """TikTok Shop data crawler using Kalodata API with real-time live fallback."""
+    """TikTok Shop data crawler using Kalodata API with robust real-time live fallback."""
 
     name = "tiktok"
     label = "TikTok Shop"
@@ -135,11 +146,9 @@ class KalodataCrawler:
         """Crawl TikTok Shop products via Kalodata API or live buyer viral signals."""
         print(f"[tiktok] Live Crawling: query='{query}'")
 
-        # 1. Primary: Try Kalodata if key configured
         products = []
         if settings.KALODATA_API_KEY:
             try:
-                # Attempt Kalodata API request
                 headers = {"Content-Type": "application/json", "x-api-key": settings.KALODATA_API_KEY}
                 payload = {
                     "region": "US",
@@ -173,13 +182,11 @@ class KalodataCrawler:
             except Exception as e:
                 print(f"[kalodata] API attempt: {e}")
 
-        # 2. Live fallback: Query live viral TikTok signals with dynamic images
         if not products:
             products = await _fetch_tiktok_live_buyer_signals(query, limit=limit)
 
-        # 3. Topic fallback
         if not products:
-            live_imgs = await _fetch_live_images_for_tiktok(query, limit=2)
+            live_imgs = await _fetch_live_images_for_tiktok(query, limit=5)
             products.append({
                 "source": "tiktok",
                 "product_id": f"tt-topic-{abs(hash(query)) % 100000}",

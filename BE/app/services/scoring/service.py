@@ -344,7 +344,15 @@ class ScoringService:
         """Score market signals and return ranked opportunities with deep verified rationales."""
         scored = []
 
-        for sig in signals:
+        # Collect all valid image URLs from signals as pool
+        image_pool = [
+            s.get("image_url") or s.get("img_url") or s.get("thumbnail")
+            for s in signals
+            if (s.get("image_url") or s.get("img_url") or s.get("thumbnail"))
+            and str(s.get("image_url") or s.get("img_url") or "").startswith("http")
+        ]
+
+        for idx, sig in enumerate(signals):
             breakdown = self._score_breakdown(sig)
             total = self._weighted_sum(breakdown)
 
@@ -380,10 +388,14 @@ class ScoringService:
                 "sku_description": f"{sku} (+${fin['net_unit_profit']:.2f} lãi ròng/sp)",
             }
 
+            raw_img = sig.get("image_url") or sig.get("img_url") or sig.get("thumbnail")
+            if (not raw_img or not str(raw_img).startswith("http")) and image_pool:
+                raw_img = image_pool[idx % len(image_pool)]
+
             prod_img = _resolve_product_image(
                 sig.get("title", ""),
                 sig.get("category", ""),
-                sig.get("image_url") or sig.get("img_url") or sig.get("thumbnail"),
+                raw_img,
             )
 
             item = OpportunityItem(

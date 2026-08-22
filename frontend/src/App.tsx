@@ -18,7 +18,7 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  ChevronDown,
+  ChevronDown, ChevronRight,
   ChevronUp,
   CircleDollarSign,
   Clapperboard,
@@ -904,23 +904,31 @@ function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen
   const [expanded, setExpanded] = useState<string | null>(rows[0]?.id || null);
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-hidden shadow-sm border border-[var(--border)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--panel)] px-5 py-3 text-xs text-[var(--text-3)] lg:hidden">
+        <span className="flex items-center gap-1.5 font-medium">
+          <ChevronRight className="h-3.5 w-3.5 text-[var(--accent)]" />
+          {t("Cuộn ngang để xem trọn vẹn 6 chỉ số thị trường", "Swipe horizontally for full metrics")}
+        </span>
+        <span className="font-mono font-bold text-[var(--text-2)]">{rows.length} {t("cơ hội", "opportunities")}</span>
+      </div>
+
       <div className="w-full overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)] bg-[var(--panel-2)] text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-3)]">
+        <table className="w-full min-w-[960px] border-collapse text-left text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b border-[var(--border)] bg-[var(--panel-2)] text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-3)] backdrop-blur-md">
               <th className="w-14 px-4 py-3.5 text-center">#</th>
-              <th className="px-4 py-3.5">{t("Sản phẩm & Ngách", "Product & Niche")}</th>
-              <th className="w-28 px-4 py-3.5 text-center">{t("Nguồn", "Source")}</th>
-              <th className="w-32 px-4 py-3.5">{t("Điểm", "Score")}</th>
-              <th className="w-24 px-4 py-3.5 text-right">{t("Biên lãi", "Margin")}</th>
-              <th className="w-24 px-4 py-3.5 text-right">{t("Lãi/sp", "Profit/unit")}</th>
-              <th className="w-24 px-4 py-3.5 text-right">{t("Giá bán", "Price")}</th>
-              <th className="w-28 px-4 py-3.5 text-center">{t("Bản quyền", "IP Status")}</th>
-              <th className="w-12 px-4 py-3.5 text-center"></th>
+              <th className="px-5 py-3.5">{t("Sản phẩm & Ngách POD", "Product & POD Niche")}</th>
+              <th className="w-32 px-4 py-3.5 text-center">{t("Nguồn sàn", "Source")}</th>
+              <th className="w-36 px-4 py-3.5">{t("Điểm cơ hội", "Score")}</th>
+              <th className="w-28 px-4 py-3.5 text-right">{t("Biên lãi", "Margin")}</th>
+              <th className="w-28 px-4 py-3.5 text-right">{t("Lãi ròng/sp", "Profit/unit")}</th>
+              <th className="w-28 px-4 py-3.5 text-right">{t("Giá bán", "Price")}</th>
+              <th className="w-32 px-4 py-3.5 text-center">{t("Bản quyền", "IP Status")}</th>
+              <th className="w-24 px-4 py-3.5 text-center">{t("Thao tác", "Action")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border)]">
+          <tbody className="divide-y divide-[var(--border)] bg-[var(--panel)]">
             {rows.map((opp, index) => {
               const isCleanIp = opp.ip_safety_status.includes("CLEAN") || opp.ip_safety_status.toLowerCase().includes("sạch");
               const isOpen = expanded === opp.id;
@@ -928,63 +936,71 @@ function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen
                 <Fragment key={opp.id}>
                   <tr
                     className={cn(
-                      "cursor-pointer transition hover:bg-[var(--panel-2)]",
-                      isOpen && "bg-[var(--panel-2)]/60"
+                      "cursor-pointer transition-colors hover:bg-[var(--panel-2)]/70",
+                      isOpen && "bg-[var(--panel-2)]/50"
                     )}
                     onClick={() => setExpanded(isOpen ? null : opp.id)}
                   >
                     <td className="px-4 py-4 text-center">
                       <span className={cn(
-                        "inline-grid h-8 w-8 place-items-center rounded-lg font-mono text-xs font-bold",
+                        "inline-grid h-8 w-8 place-items-center rounded-lg font-mono text-xs font-bold shadow-sm",
                         index === 0 ? "rank-1" : index === 1 ? "rank-2" : index === 2 ? "rank-3" : "rank-n"
                       )}>
                         {index === 0 ? <Crown className="h-4 w-4" /> : index + 1}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3.5">
                         {(opp as any).image_url ? (
                           <img
                             src={(opp as any).image_url}
                             alt={opp.name}
-                            className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border)] object-cover shadow-sm"
+                            className="h-14 w-14 shrink-0 rounded-xl border border-[var(--border)] object-cover shadow-sm transition hover:scale-105"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
                           />
                         ) : (
-                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[var(--panel-2)] text-xs font-bold text-[var(--text-3)]">
+                          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-[var(--panel-2)] text-xs font-bold text-[var(--text-3)] border border-[var(--border)]">
                             POD
                           </div>
                         )}
-                        <div className="min-w-0 max-w-[320px]">
-                          <strong className="block truncate text-sm font-bold text-[var(--text-1)]">
+                        <div className="min-w-0 max-w-[340px]">
+                          <strong className="block text-sm font-bold text-[var(--text-1)] line-clamp-1 leading-snug">
                             {opp.name}
                           </strong>
-                          <span className="block truncate text-xs text-[var(--text-3)]">
+                          <span className="block truncate text-xs text-[var(--text-3)] mt-0.5">
                             {opp.target_niche}
                           </span>
-                          <span className="badge badge-red mt-1 !text-[10px]">
-                            {categoryName(opp.category)}
-                          </span>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="badge badge-red !text-[10px] !py-0.5 !px-2">
+                              {categoryName(opp.category)}
+                            </span>
+                            <span className="badge badge-gray !text-[10px] !py-0.5 !px-2 font-mono">
+                              {opp.matched_sku}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex flex-wrap justify-center gap-1">
                         {(opp.marketplace_sources ?? []).slice(0, 1).map((source) => (
-                          <span key={source} className="badge badge-sky !text-[10px]">
+                          <span key={source} className="badge badge-sky !text-[11px] !py-1 !px-2.5 font-semibold">
                             {source}
                           </span>
                         ))}
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-[var(--text-1)]">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono text-base font-extrabold text-[var(--text-1)]">
                           {opp.opportunity_score}
                         </span>
                         <div className="h-2 w-16 overflow-hidden rounded-full bg-[var(--panel-3)]">
                           <div
-                            className="h-2 rounded-full bg-[var(--accent)]"
+                            className="h-2 rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)]"
                             style={{ width: `${Math.min(opp.opportunity_score, 100)}%` }}
                           />
                         </div>
@@ -1000,25 +1016,37 @@ function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen
                       {money(opp.suggested_price)}
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <span className={cn("badge !text-[10px]", isCleanIp ? "badge-emerald" : "badge-amber")}>
+                      <span className={cn("badge !text-[11px] !py-1 !px-2.5 font-semibold", isCleanIp ? "badge-emerald" : "badge-amber")}>
                         {isCleanIp ? t("Clean IP", "Clean IP") : t("Cần duyệt", "Review")}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <ChevronDown className={cn("h-4 w-4 text-[var(--text-3)] transition-transform", isOpen && "rotate-180")} />
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpen(opp);
+                          }}
+                          className="btn-soft !py-1 !px-2.5 !text-xs"
+                          title={t("Xem Brief kỹ thuật", "View brief")}
+                        >
+                          Brief
+                        </button>
+                        <ChevronDown className={cn("h-4 w-4 text-[var(--text-3)] transition-transform duration-200", isOpen && "rotate-180")} />
+                      </div>
                     </td>
                   </tr>
 
                   {isOpen && (
-                    <tr className="border-t border-[var(--border)] bg-[var(--panel-2)]/40">
-                      <td colSpan={9} className="p-6">
-                        <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
+                    <tr className="border-t border-[var(--border)] bg-[var(--panel-2)]/50">
+                      <td colSpan={9} className="p-6 lg:p-8">
+                        <div className="grid gap-6 lg:grid-cols-[1fr_1.15fr]">
                           <div className="space-y-5">
                             <UnitEconomicsBox opportunity={opp} />
-                            <div className="card p-5">
+                            <div className="card p-5 border border-[var(--border)]">
                               <h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[var(--accent)]">
                                 <Quote className="h-4 w-4" />
-                                {t("Nỗi đau khách hàng được giải quyết", "Customer pain point solved")}
+                                {t("Nỗi đau khách hàng được giải quyết (Từ review 1 sao sàn)", "Customer pain point solved")}
                               </h4>
                               <p className="mt-3 text-sm leading-relaxed text-[var(--text-2)]">
                                 {opp.key_pain_point_solved}
@@ -1026,7 +1054,7 @@ function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen
                               {opp.negative_reviews_summary && opp.negative_reviews_summary.length > 0 && (
                                 <div className="mt-4 space-y-2">
                                   {opp.negative_reviews_summary.slice(0, 3).map((review, i) => (
-                                    <blockquote key={i} className="quote-block text-sm leading-relaxed text-[var(--text-2)]">
+                                    <blockquote key={i} className="quote-block text-xs leading-relaxed text-[var(--text-2)]">
                                       {review}
                                     </blockquote>
                                   ))}
@@ -1036,24 +1064,24 @@ function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen
                           </div>
                           <ScoringDetailPanel opportunity={opp} preset="VIRAL_TREND" />
                         </div>
-                        <div className="mt-5">
+                        <div className="mt-6">
                           <PriceChartCard opportunity={opp} />
                         </div>
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-5">
-                          <span className="flex items-center gap-2 text-sm text-[var(--text-2)]">
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-5">
+                          <span className="flex items-center gap-2 text-sm text-[var(--text-2)] font-medium">
                             <Flame className="h-4 w-4 text-[var(--accent)]" />
                             {opp.trend_velocity}
                           </span>
                           <div className="flex gap-3">
-                            <span className="btn-soft !cursor-default">
+                            <span className="btn-soft !cursor-default font-mono">
                               <Factory className="h-4 w-4" />
                               {opp.matched_sku}
                             </span>
                             <button
                               onClick={() => onOpen(opp)}
-                              className="btn-primary !px-6 !py-2.5 !text-sm"
+                              className="btn-primary !px-6 !py-2.5 !text-sm shadow-md"
                             >
-                              {t("Xem Brief & chiến lược marketing", "View brief & marketing strategy")}
+                              {t("Xem Brief kỹ thuật & chiến lược marketing", "View technical brief & marketing strategy")}
                               <ArrowRight className="h-4 w-4" />
                             </button>
                           </div>
@@ -1066,7 +1094,7 @@ function ResultsTable({ rows, onOpen, emptyText }: { rows: Opportunity[]; onOpen
             })}
             {!rows.length && (
               <tr>
-                <td colSpan={9} className="px-4 py-16 text-center text-sm text-[var(--text-2)]">
+                <td colSpan={9} className="px-5 py-16 text-center text-sm text-[var(--text-2)]">
                   {emptyText}
                 </td>
               </tr>
