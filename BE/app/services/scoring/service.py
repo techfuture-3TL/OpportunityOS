@@ -64,31 +64,10 @@ def _map_sku(title: str) -> tuple[str, float, float]:
 
 
 def _resolve_product_image(title: str, category: str, raw_img: Optional[str] = None) -> str:
-    """Resolve high-res e-commerce product image."""
-    if raw_img and (raw_img.startswith("http://") or raw_img.startswith("https://")) and len(raw_img) > 12:
+    """Pass through live crawled product image."""
+    if raw_img and (raw_img.startswith("http://") or raw_img.startswith("https://")):
         return raw_img
-    
-    t = title.lower()
-    if any(k in t for k in ["tumbler", "bình", "binh", "ly", "flask", "cup", "bottle"]):
-        return "https://images.unsplash.com/photo-1570831739421-9ff7738c4670?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["giày", "giay", "sneaker", "shoes", "shoe", "boot"]):
-        return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["hoodie", "jacket", "sweater"]):
-        return "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["shirt", "tee", "áo", "ao"]):
-        return "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["light", "lamp", "acrylic", "đèn", "den"]):
-        return "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["ornament", "christmas", "noel"]):
-        return "https://images.unsplash.com/photo-1543257580-7269da773bf5?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["dog", "cat", "pet", "chó", "mèo"]):
-        return "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["mug", "cốc"]):
-        return "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80"
-    if any(k in t for k in ["wood", "plaque", "sign"]):
-        return "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&auto=format&fit=crop&q=80"
-
-    return "https://images.unsplash.com/photo-1570831739421-9ff7738c4670?w=600&auto=format&fit=crop&q=80"
+    return ""
 
 
 def _extract_keywords_from_title(title: str, niche: str) -> List[str]:

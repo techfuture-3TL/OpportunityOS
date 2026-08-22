@@ -42,35 +42,10 @@ function guessCategory(title: string): string {
 }
 
 function resolveProductImage(title: string, category: string, rawImg?: string): string {
-  if (rawImg && (rawImg.startsWith('http://') || rawImg.startsWith('https://')) && rawImg.length > 12) {
+  if (rawImg && (rawImg.startsWith('http://') || rawImg.startsWith('https://'))) {
     return rawImg
   }
-  const t = title.toLowerCase()
-  if (t.includes('tumbler') || t.includes('bình') || t.includes('ly') || t.includes('cốc') || t.includes('bottle')) {
-    return 'https://images.unsplash.com/photo-1570831739421-9ff7738c4670?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('giày') || t.includes('sneaker') || t.includes('shoes')) {
-    return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('hoodie')) {
-    return 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('shirt') || t.includes('tee') || t.includes('áo')) {
-    return 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('light') || t.includes('lamp') || t.includes('acrylic') || t.includes('đèn')) {
-    return 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('ornament') || t.includes('christmas') || t.includes('noel')) {
-    return 'https://images.unsplash.com/photo-1543257580-7269da773bf5?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('dog') || t.includes('cat') || t.includes('pet')) {
-    return 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&auto=format&fit=crop&q=80'
-  }
-  if (t.includes('mug')) {
-    return 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80'
-  }
-  return 'https://images.unsplash.com/photo-1570831739421-9ff7738c4670?w=600&auto=format&fit=crop&q=80'
+  return ''
 }
 
 function unwrap<T>(envelope: { success?: boolean; data?: T; error?: string }): T {

@@ -2267,92 +2267,99 @@ function UnitEconomicsBox({ opportunity }: { opportunity: Opportunity }) {
 /* ── SHARED: 6 pillar chips interactive ── */
 function PillarsInteractive({ opportunity }: { opportunity: Opportunity }) {
   const { t, lang } = useI18n();
-  const [activePillar, setActivePillar] = useState<string | null>(null);
+  const [activePillar, setActivePillar] = useState<string>("demand");
   const detail = buildScoringDetail(opportunity, "VIRAL_TREND");
   const pillarMap = new Map(detail.pillars.map((p) => [p.key, p]));
 
   const pillars = [
-    { key: "demand", field: "demand_growth" },
-    { key: "gap", field: "market_gap" },
-    { key: "margin", field: "profit_margin" },
-    { key: "supply", field: "supply_feasibility" },
-    { key: "safety", field: "ip_safety" },
-    { key: "virality", field: "tiktok_virality" },
+    { key: "demand", field: "demand_growth", labelVi: "Nhu cầu", labelEn: "Demand", icon: "📊" },
+    { key: "gap", field: "market_gap", labelVi: "Khoảng trống", labelEn: "Market Gap", icon: "🎯" },
+    { key: "margin", field: "profit_margin", labelVi: "Biên lãi", labelEn: "Margin", icon: "💰" },
+    { key: "supply", field: "supply_feasibility", labelVi: "Chuỗi cung", labelEn: "Supply", icon: "⚡" },
+    { key: "safety", field: "ip_safety", labelVi: "Bản quyền", labelEn: "IP Safety", icon: "🛡️" },
+    { key: "virality", field: "tiktok_virality", labelVi: "Viral TikTok", labelEn: "Virality", icon: "📱" },
   ] as const;
 
+  const activePillarObj = pillars.find((p) => p.key === activePillar) || pillars[0];
+  const scoreVal = Number(opportunity.score_breakdown[activePillarObj.field] || 0).toFixed(0);
+
+  const rationale =
+    opportunity.score_rationales?.[activePillarObj.key as keyof typeof opportunity.score_rationales] ||
+    opportunity.score_rationales?.[activePillarObj.field as keyof typeof opportunity.score_rationales] ||
+    (opportunity as any).score_breakdown_details?.[activePillarObj.key]?.reason ||
+    (opportunity as any).score_breakdown_details?.[activePillarObj.field]?.reason ||
+    (opportunity as any).rationales?.[activePillarObj.key] ||
+    (opportunity as any).rationales?.[activePillarObj.field] ||
+    t("Số liệu được tính toán dựa trên thuật toán định lượng đa biến 6 trụ cột của Printway.", "Calculated via Printway 6-pillar quantitative model.");
+
   return (
-    <div>
-      <p className="text-[10.5px] font-extrabold uppercase tracking-[0.14em] t-3">
-        {t("6 trụ cột cơ hội — bấm từng mục để xem số liệu & đối chuẩn benchmark", "6 opportunity pillars — click for metrics & benchmarks")}
-      </p>
-      <div className="mt-2.5 grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {pillars.map(({ key, field }) => {
-          const p = pillarMap.get(key);
-          const isSelected = activePillar === key;
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#78716c]">
+          {t("Bóc tách định lượng 6 trụ cột", "6-Pillar Quantitative Breakdown")}
+        </p>
+        <span className="text-[10.5px] font-semibold text-[#a8a29e]">
+          {t("Bấm chọn trụ cột để xem giải trình số liệu", "Select a pillar to view metrics")}
+        </span>
+      </div>
+
+      {/* Pillar selector buttons */}
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {pillars.map((p) => {
+          const isSelected = activePillar === p.key;
+          const score = Number(opportunity.score_breakdown[p.field] || 0).toFixed(0);
           return (
             <button
               type="button"
-              key={key}
-              onClick={() => setActivePillar(isSelected ? null : key)}
-              className={cn("pillar-btn", isSelected && "pillar-btn-active")}
+              key={p.key}
+              onClick={() => setActivePillar(p.key)}
+              className={cn(
+                "group relative flex flex-col rounded-xl border p-2.5 text-left transition-all",
+                isSelected
+                  ? "border-[#b72727] bg-[#fff5f5] shadow-sm ring-1 ring-[#b72727]"
+                  : "border-[#e7e5e4] bg-white hover:border-[#d6d3d1] hover:bg-[#fafaf9]"
+              )}
             >
-              <span className={cn("block truncate text-[9.5px] font-bold uppercase tracking-wide", isSelected ? "text-[#b72727]" : "t-3")}>
-                {lang === "vi" ? p?.label_vi : p?.label_en || p?.label_vi}
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px]">{p.icon}</span>
+                <span className={cn("font-mono text-xs font-black", isSelected ? "text-[#b72727]" : "text-[#1c1917]")}>
+                  {score}
+                </span>
+              </div>
+              <span className={cn("mt-1.5 block truncate text-[10px] font-bold", isSelected ? "text-[#b72727]" : "text-[#78716c]")}>
+                {lang === "vi" ? p.labelVi : p.labelEn}
               </span>
-              <strong className={cn("mt-1 block font-mono text-[13px] font-bold", isSelected ? "text-[#b72727]" : "text-[#1c1917]")}>
-                {Number(opportunity.score_breakdown[field]).toFixed(0)}
-              </strong>
-              <div className="pillar-bar mt-1.5">
-                <div className="pillar-bar-fill" style={{ width: `${Math.min(Number(opportunity.score_breakdown[field]), 100)}%` }} />
+              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[#f0efed]">
+                <div
+                  className={cn("h-full transition-all duration-300", isSelected ? "bg-[#b72727]" : "bg-[#a8a29e]")}
+                  style={{ width: `${Math.min(Number(score), 100)}%` }}
+                />
               </div>
             </button>
           );
         })}
       </div>
 
-      {activePillar && (() => {
-        const pObj = pillars.find((p) => p.key === activePillar);
-        const fieldName = pObj ? pObj.field : activePillar;
-        const scoreVal = pObj ? Number(opportunity.score_breakdown[pObj.field]).toFixed(0) : "";
-        
-        const rationale =
-          opportunity.score_rationales?.[activePillar as keyof typeof opportunity.score_rationales] ||
-          (pObj && opportunity.score_rationales?.[pObj.field as keyof typeof opportunity.score_rationales]) ||
-          (opportunity as any).score_breakdown_details?.[activePillar]?.reason ||
-          (pObj && (opportunity as any).score_breakdown_details?.[pObj.field]?.reason) ||
-          (opportunity as any).rationales?.[activePillar] ||
-          (pObj && (opportunity as any).rationales?.[pObj.field]);
-
-        return (
-          <div className="mt-3 rounded-xl border border-[#f3d6d6] bg-[#fdf3f3] p-4 text-xs animate-fade-up">
-            <div className="mb-2.5 flex items-center justify-between border-b border-[#f3d6d6]/60 pb-2">
-              <span className="flex items-center gap-1.5 font-bold text-[#b72727]">
-                <Lightbulb className="h-4 w-4" />
-                {t("Lý giải điểm & Đối chuẩn Benchmark", "Score rationale & Benchmark comparison")}:{" "}
-                <span className="text-[#1c1917]">
-                  {lang === "vi" ? pillarMap.get(activePillar)?.label_vi : pillarMap.get(activePillar)?.label_en}
-                </span>
-                <span className="ml-2 rounded bg-[#b72727] px-2 py-0.5 font-mono text-[11px] font-bold text-white">
-                  {scoreVal}/100
-                </span>
-              </span>
-              <button
-                onClick={() => setActivePillar(null)}
-                className="rounded px-2 py-0.5 text-[11px] font-bold text-[#78716c] transition hover:bg-[#f3d6d6] hover:text-[#1c1917]"
-              >
-                ✕ {t("Đóng", "Close")}
-              </button>
-            </div>
-            <div className="whitespace-pre-line text-xs font-medium leading-relaxed text-[#292524]">
-              {rationale ||
-                t(
-                  "Điểm số được tính toán dựa trên mô hình định lượng đa biến 6 trụ cột của Printway.",
-                  "Score computed by Printway 6-pillar multivariate quantitative model.",
-                )}
-            </div>
+      {/* Rationale & Benchmark Explanation Box */}
+      <div className="rounded-xl border border-[#e7e5e4] bg-white p-4 shadow-sm">
+        <div className="mb-2.5 flex items-center justify-between border-b border-[#f0efed] pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{activePillarObj.icon}</span>
+            <strong className="text-xs font-extrabold text-[#1c1917]">
+              {lang === "vi" ? activePillarObj.labelVi : activePillarObj.labelEn}:
+            </strong>
+            <span className="rounded-lg bg-[#b72727] px-2 py-0.5 font-mono text-[11px] font-bold text-white">
+              {scoreVal}/100
+            </span>
           </div>
-        );
-      })()}
+          <span className="rounded-md border border-[#e7e5e4] bg-[#fafaf9] px-2 py-0.5 text-[10.5px] font-semibold text-[#78716c]">
+            {t("Đối chuẩn Benchmark Ngành", "Industry Benchmark")}
+          </span>
+        </div>
+        <div className="whitespace-pre-line text-xs font-medium leading-relaxed text-[#374151]">
+          {rationale}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2473,25 +2480,9 @@ function ResultsTable({
                   {isOpen && (
                     <tr className="border-t border-[#f0efed]">
                       <td colSpan={9} className="bg-[#fafaf9] px-5 py-5">
-                        <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-                          <div className="space-y-4">
-                            <UnitEconomicsBox opportunity={opp} />
-                            <div className="card p-4">
-                              <h4 className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#b72727]">
-                                <Quote className="h-3.5 w-3.5" />
-                                {t("Nỗi đau khách hàng được giải quyết", "Customer pain point solved")}
-                              </h4>
-                              <p className="mt-2 text-xs leading-relaxed t-2">{opp.key_pain_point_solved}</p>
-                              <div className="mt-3 space-y-1.5">
-                                {opp.negative_reviews_summary.slice(0, 3).map((review) => (
-                                  <blockquote key={review} className="quote-block text-[11px] leading-relaxed t-2">
-                                    {review}
-                                  </blockquote>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          <ScoringDetailPanel opportunity={opp} preset="VIRAL_TREND" />
+                        <div className="grid gap-5 lg:grid-cols-[1.3fr_0.9fr]">
+                          <PillarsInteractive opportunity={opp} />
+                          <UnitEconomicsBox opportunity={opp} />
                         </div>
 
                         <div className="mt-4">
@@ -2649,16 +2640,9 @@ function OpportunityCard({
       </div>
 
       {/* Body */}
-      <div className="grid gap-4 border-t border-[#f0efed] p-5 lg:grid-cols-[1.35fr_0.9fr]">
+      <div className="grid gap-5 border-t border-[#f0efed] p-5 lg:grid-cols-[1.35fr_0.9fr]">
         <div>
           <PillarsInteractive opportunity={opportunity} />
-          <div className="mt-3 rounded-xl border-l-2 border-[#b72727] bg-[#fafaf9] p-3.5 text-xs t-2">
-            <strong className="flex items-center gap-1.5 font-bold text-[#1c1917]">
-              <Quote className="h-3.5 w-3.5 text-[#b72727]" />
-              {t("Nỗi đau khách hàng được giải quyết", "Customer pain point solved")}
-            </strong>
-            <p className="mt-1.5 leading-relaxed">{opportunity.key_pain_point_solved}</p>
-          </div>
         </div>
         <UnitEconomicsBox opportunity={opportunity} />
       </div>

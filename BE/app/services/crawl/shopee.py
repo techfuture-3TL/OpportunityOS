@@ -127,9 +127,47 @@ async def _try_search_items_api(query: str, limit: int = 30) -> List[Dict[str, A
     return products
 
 
+async def _fetch_live_images_for_shopee(query: str, limit: int = 15) -> List[str]:
+    """Fetch real-time product photos dynamically from the web."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    }
+    q_str = f"{query} shopee product"
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            resp = await client.get(
+                "https://duckduckgo.com/?q=" + urllib.parse.quote(q_str) + "&iax=images&ia=images",
+                headers=headers,
+            )
+            m = re.search(r"vqd=[\x27\x22]?([0-9\-]+)[\x27\x22]?", resp.text)
+            if not m:
+                return []
+            vqd = m.group(1)
+            img_url = (
+                "https://duckduckgo.com/i.js?l=us-en&o=json&q="
+                + urllib.parse.quote(q_str)
+                + "&vqd="
+                + vqd
+                + "&f=,,,&p=1"
+            )
+            i_resp = await client.get(img_url, headers=headers)
+            if i_resp.status_code == 200:
+                results = i_resp.json().get("results", [])
+                images = []
+                for r in results[:limit]:
+                    img = r.get("image")
+                    if img and img.startswith("http") and not img.endswith(".svg"):
+                        images.append(img)
+                return images
+    except Exception:
+        pass
+    return []
+
+
 async def _fetch_shopee_hints(query: str, limit: int = 30) -> List[Dict[str, Any]]:
     """Fetch live trending keywords & ML demand rank scores directly from Shopee Search Hint API."""
     results: List[Dict[str, Any]] = []
+    live_images_task = asyncio.create_task(_fetch_live_images_for_shopee(query, limit=limit + 5))
     try:
         q_enc = urllib.parse.quote(query)
         url = f"https://shopee.vn/api/v4/search/search_hint?keyword={q_enc}&search_type=0&version=1"
@@ -175,6 +213,20 @@ async def _fetch_shopee_hints(query: str, limit: int = 30) -> List[Dict[str, Any
                     })
     except Exception as e:
         print(f"[shopee] hint error: {e}")
+
+    live_images = []
+    try:
+        live_images = await live_images_task
+    except Exception:
+        pass
+
+    for idx, p in enumerate(results):
+        if not p.get("image_url"):
+            if live_images and idx < len(live_images):
+                p["image_url"] = live_images[idx]
+            elif live_images:
+                p["image_url"] = live_images[idx % len(live_images)]
+
     return results
 
 
